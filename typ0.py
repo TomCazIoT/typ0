@@ -175,7 +175,11 @@ def load_tlds(url: str = TLD_LIST_URL) -> list[str]:
 def parse_tlds(value: str) -> list[str]:
     """Parse a comma-separated TLD argument and preserve its input order."""
 
-    tlds = [tld.strip().lstrip(".").lower() for tld in value.split(",") if tld.strip()]
+    tlds = [
+        tld
+        for raw_tld in value.split(",")
+        if (tld := raw_tld.strip().lstrip(".").lower())
+    ]
     if not tlds:
         raise ValueError("at least one TLD must be provided")
     return list(dict.fromkeys(tlds))
