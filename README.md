@@ -8,16 +8,6 @@ including Unicode confusables from the official Unicode [confusables.txt](https:
 checks them with `dig`, optionally looks up IP geolocation, checks HTTPS pages,
 and extracts TLS certificate information.
 
-## Interpreting the results
-
-The results are indicators, not proof that typosquatting exists or that a
-domain is malicious. A generated lookalike domain, DNS record, web page, or
-certificate only shows that the domain may exist and deserves further
-investigation. Domains can be registered for legitimate reasons, and the
-absence of a DNS or HTTPS result does not prove that no typosquatting is
-occurring. Always validate findings with additional context and, where
-appropriate, manual or legal investigation.
-
 ```bash
 python3 typ0.py example.com --output report.json
 ```
@@ -87,7 +77,17 @@ prefixes and suffixes, and Unicode confusable substitutions. Unicode
 candidates are converted to IDNA (punycode) before DNS and HTTPS requests;
 both forms are included in the report.
 
-Run the automated tests with:
+## Interpreting the results
+
+The results are indicators, not proof that typosquatting exists or that a
+domain is malicious. A generated lookalike domain, DNS record, web page, or
+certificate only shows that the domain may exist and deserves further
+investigation. Domains can be registered for legitimate reasons, and the
+absence of a DNS or HTTPS result does not prove that no typosquatting is
+occurring. Always validate findings with additional context and, where
+appropriate, manual or legal investigation.
+
+## Run the automated tests with:
 
 ```bash
 python3 -m unittest discover -s tests -v
