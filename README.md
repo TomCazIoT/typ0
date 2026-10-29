@@ -54,8 +54,9 @@ python3 typ0.py example.com --output report.json \
 Available steps are `generate`, `dns`, `geo`, `http`, and `cert`. By default all
 steps are enabled. `dns` requires the `dig` command to be installed and
 available in `PATH`. The `geo` step sends discovered public IP addresses to the
-public `ipwho.is` API. The generation step downloads the official Unicode source
-over HTTPS; use `--confusables-url` to provide a mirror or a local HTTP server.
+public `https://ipwho.is/` API for geolocation. The generation step downloads
+the official Unicode source over HTTPS; use `--confusables-url` to provide a
+mirror or a local HTTP server.
 Network operations use a ten-second timeout, except the Unicode source download,
 which uses fifteen seconds.
 

@@ -26,8 +26,8 @@ CONFUSABLES_URL = "https://www.unicode.org/Public/security/latest/confusables.tx
 TLD_LIST_URL = "https://data.iana.org/TLD/tlds-alpha-by-domain.txt"
 # Common generic and country-code TLDs used for broad typosquatting checks.
 TOP_TLDS = (
-    "com", "org", "net", "co", "io", "ai", "app", "dev",
-    "xyz", "online", "site", "info", "biz", "me", "tech",
+    "com", "fr", "net", "org", "de", "uk", "cn", "ru",
+    "nl", "eu", "info", "xyz", "io", "co", "app",
 )
 KEYBOARD_NEIGHBORS = {
     "q": "was", "w": "qes", "e": "wrs", "r": "etf", "t": "rgy",
