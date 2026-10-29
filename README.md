@@ -4,7 +4,7 @@ Typosquatting detection tool to identify potentially malicious lookalike domains
 ## Usage
 
 `typ0` is a standard-library Python CLI that generates common lookalike domains,
-including Unicode confusables from the official Unicode `confusables.txt` data,
+including Unicode confusables from the official Unicode [confusables.txt](https://www.unicode.org/Public/security/latest/confusables.txt) data,
 checks them with `dig`, optionally looks up IP geolocation, checks HTTPS pages,
 and extracts TLS certificate information.
 
