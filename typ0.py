@@ -39,6 +39,15 @@ KEYBOARD_NEIGHBORS = {
     "l": "kop", "z": "asx", "x": "zsdc", "c": "xdfv",
     "v": "cfgb", "b": "vghn", "n": "bhjm", "m": "njk",
 }
+# Common substitutions where a letter and a digit look similar in a domain
+# name. Each replacement is applied one character at a time.
+CHARACTER_LOOKALIKES = {
+    "a": "4", "e": "3", "g": "9", "i": "1", "l": "1",
+    "o": "0", "s": "5", "t": "7", "b": "8",
+}
+# These terms are common in deceptive lookalike domains. They are kept small
+# and explicit so candidate generation remains predictable.
+COMMON_DOMAIN_TERMS = ("account", "login", "secure", "support", "verify")
 ProgressCallback = Callable[[int, int], None]
 
 
@@ -194,6 +203,8 @@ def generate_candidates(
         if name[index].isalpha():
             for replacement in KEYBOARD_NEIGHBORS.get(name[index], ""):
                 candidates.add(name[:index] + replacement + name[index + 1:])
+            for replacement in CHARACTER_LOOKALIKES.get(name[index], ""):
+                candidates.add(name[:index] + replacement + name[index + 1:])
         if index + 1 < len(name) and name[index] != name[index + 1]:
             swapped = list(name)
             swapped[index], swapped[index + 1] = swapped[index + 1], swapped[index]
@@ -202,6 +213,9 @@ def generate_candidates(
         candidates.add(name[:index] + "-" + name[index:])
     for character in "0123456789":
         candidates.add(name + character)
+    for term in COMMON_DOMAIN_TERMS:
+        candidates.add(f"{term}-{name}")
+        candidates.add(f"{name}-{term}")
     for index, character in enumerate(name):
         for replacement in confusables.get(character, ()):
             candidates.add(name[:index] + replacement + name[index + 1:])

@@ -75,6 +75,8 @@ Only the first label of the supplied domain is mutated; its suffix is preserved
 unless `--top-tlds`, `--tlds`, or `--all-tlds` is used. The TLD selection
 options are mutually exclusive.
 The generated mutations include character omissions, repetitions, adjacent
-keyboard substitutions, transpositions, hyphen insertion, appended digits, and
-Unicode confusable substitutions. Unicode candidates are converted to IDNA
-(punycode) before DNS and HTTPS requests; both forms are included in the report.
+keyboard substitutions, letter/digit lookalikes such as `o/0` and `l/1`,
+transpositions, hyphen insertion, appended digits, common security-related
+prefixes and suffixes, and Unicode confusable substitutions. Unicode
+candidates are converted to IDNA (punycode) before DNS and HTTPS requests;
+both forms are included in the report.
