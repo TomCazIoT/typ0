@@ -60,6 +60,13 @@ mirror or a local HTTP server.
 Network operations use a ten-second timeout, except the Unicode source download,
 which uses fifteen seconds.
 
+Network checks run concurrently with a bounded worker pool. Use `--workers` to
+control the maximum number of simultaneous tasks; it defaults to 8:
+
+```bash
+python3 typ0.py example.com --output report.json --top-tlds --workers 4
+```
+
 During execution, typ0 displays the current step, its position in the workflow,
 and a progress bar based on the number of candidates, IPs, or certificates
 processed. The report-writing step is always displayed as the final step.
