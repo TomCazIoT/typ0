@@ -1,0 +1,1308 @@
+{
+  "tool": "typ0",
+  "source_domain": "google.fr",
+  "steps": [
+    "generate",
+    "dns",
+    "geo",
+    "http",
+    "cert"
+  ],
+  "confusables_source": "https://www.unicode.org/Public/security/latest/confusables.txt",
+  "tlds": [
+    "fr"
+  ],
+  "candidate_count": 227,
+  "candidates": [
+    "boogle.fr",
+    "foogle.fr",
+    "g-oogle.fr",
+    "ggoogle.fr",
+    "giogle.fr",
+    "glogle.fr",
+    "go-ogle.fr",
+    "gogle.fr",
+    "gogole.fr",
+    "goigle.fr",
+    "golgle.fr",
+    "goo-gle.fr",
+    "gooble.fr",
+    "goofle.fr",
+    "goog-le.fr",
+    "goog1e.fr",
+    "googIe.fr",
+    "googe.fr",
+    "googel.fr",
+    "googgle.fr",
+    "googie.fr",
+    "googke.fr",
+    "googl-e.fr",
+    "googl.fr",
+    "google0.fr",
+    "google1.fr",
+    "google2.fr",
+    "google3.fr",
+    "google4.fr",
+    "google5.fr",
+    "google6.fr",
+    "google7.fr",
+    "google8.fr",
+    "google9.fr",
+    "googlee.fr",
+    "googlle.fr",
+    "googlr.fr",
+    "googls.fr",
+    "googlw.fr",
+    "googoe.fr",
+    "googpe.fr",
+    "goog|e.fr",
+    "goohle.fr",
+    "goole.fr",
+    "goolge.fr",
+    "gooogle.fr",
+    "gootle.fr",
+    "gooyle.fr",
+    "gopgle.fr",
+    "gpogle.fr",
+    "hoogle.fr",
+    "ogogle.fr",
+    "oogle.fr",
+    "toogle.fr",
+    "xn--gogle-0nh.fr",
+    "xn--gogle-2723d.fr",
+    "xn--gogle-2x6a.fr",
+    "xn--gogle-3723d.fr",
+    "xn--gogle-3x6a.fr",
+    "xn--gogle-4k3a.fr",
+    "xn--gogle-5k3a.fr",
+    "xn--gogle-5kq.fr",
+    "xn--gogle-6kq.fr",
+    "xn--gogle-6u93a.fr",
+    "xn--gogle-7k6a.fr",
+    "xn--gogle-7r56a.fr",
+    "xn--gogle-7u93a.fr",
+    "xn--gogle-7xp.fr",
+    "xn--gogle-8k6a.fr",
+    "xn--gogle-8r56a.fr",
+    "xn--gogle-8xp.fr",
+    "xn--gogle-8xu.fr",
+    "xn--gogle-9bp.fr",
+    "xn--gogle-9c8s.fr",
+    "xn--gogle-9g85a.fr",
+    "xn--gogle-9xu.fr",
+    "xn--gogle-b0u.fr",
+    "xn--gogle-bcp.fr",
+    "xn--gogle-bd8s.fr",
+    "xn--gogle-bh85a.fr",
+    "xn--gogle-c0u.fr",
+    "xn--gogle-c455a.fr",
+    "xn--gogle-cpo.fr",
+    "xn--gogle-cv6a.fr",
+    "xn--gogle-d3p.fr",
+    "xn--gogle-d455a.fr",
+    "xn--gogle-dfj.fr",
+    "xn--gogle-dgq.fr",
+    "xn--gogle-dpo.fr",
+    "xn--gogle-dv6a.fr",
+    "xn--gogle-e3p.fr",
+    "xn--gogle-efj.fr",
+    "xn--gogle-egq.fr",
+    "xn--gogle-en8a.fr",
+    "xn--gogle-f7r.fr",
+    "xn--gogle-fn8a.fr",
+    "xn--gogle-fzj.fr",
+    "xn--gogle-g7r.fr",
+    "xn--gogle-gde.fr",
+    "xn--gogle-ge9a.fr",
+    "xn--gogle-gzj.fr",
+    "xn--gogle-h6o.fr",
+    "xn--gogle-hde.fr",
+    "xn--gogle-he9a.fr",
+    "xn--gogle-hlr.fr",
+    "xn--gogle-hq06a.fr",
+    "xn--gogle-i0t.fr",
+    "xn--gogle-i6o.fr",
+    "xn--gogle-ilr.fr",
+    "xn--gogle-iq06a.fr",
+    "xn--gogle-iut.fr",
+    "xn--gogle-j0t.fr",
+    "xn--gogle-jko.fr",
+    "xn--gogle-jp33d.fr",
+    "xn--gogle-jut.fr",
+    "xn--gogle-jye.fr",
+    "xn--gogle-kko.fr",
+    "xn--gogle-kp33d.fr",
+    "xn--gogle-kye.fr",
+    "xn--gogle-lkg.fr",
+    "xn--gogle-ll9c.fr",
+    "xn--gogle-lxn.fr",
+    "xn--gogle-m29a.fr",
+    "xn--gogle-m454a.fr",
+    "xn--gogle-mkg.fr",
+    "xn--gogle-ml9c.fr",
+    "xn--gogle-mxn.fr",
+    "xn--gogle-n29a.fr",
+    "xn--gogle-n454a.fr",
+    "xn--gogle-nbn.fr",
+    "xn--gogle-nke.fr",
+    "xn--gogle-np56a.fr",
+    "xn--gogle-nvv.fr",
+    "xn--gogle-obn.fr",
+    "xn--gogle-odi.fr",
+    "xn--gogle-oke.fr",
+    "xn--gogle-op56a.fr",
+    "xn--gogle-ovv.fr",
+    "xn--gogle-pdi.fr",
+    "xn--gogle-pom.fr",
+    "xn--gogle-qom.fr",
+    "xn--gogle-r1l.fr",
+    "xn--gogle-rce.fr",
+    "xn--gogle-rs04a.fr",
+    "xn--gogle-s1l.fr",
+    "xn--gogle-sce.fr",
+    "xn--gogle-ss04a.fr",
+    "xn--gogle-tfl.fr",
+    "xn--gogle-ty05a.fr",
+    "xn--gogle-ufl.fr",
+    "xn--gogle-uy05a.fr",
+    "xn--gogle-y29a.fr",
+    "xn--gogle-z29a.fr",
+    "xn--gogle-znh.fr",
+    "xn--googe-051a.fr",
+    "xn--googe-0w65a.fr",
+    "xn--googe-0y04a.fr",
+    "xn--googe-1e10d.fr",
+    "xn--googe-2ci.fr",
+    "xn--googe-3h05a.fr",
+    "xn--googe-4196a.fr",
+    "xn--googe-6g0s.fr",
+    "xn--googe-6l19c.fr",
+    "xn--googe-6v3s.fr",
+    "xn--googe-7nc.fr",
+    "xn--googe-7u3b.fr",
+    "xn--googe-8tb.fr",
+    "xn--googe-9ej.fr",
+    "xn--googe-9m55a.fr",
+    "xn--googe-9s13d.fr",
+    "xn--googe-b2t.fr",
+    "xn--googe-bp69c.fr",
+    "xn--googe-ck83a.fr",
+    "xn--googe-d037b.fr",
+    "xn--googe-di95a.fr",
+    "xn--googe-e955a.fr",
+    "xn--googe-eg83a.fr",
+    "xn--googe-enh.fr",
+    "xn--googe-fy5b.fr",
+    "xn--googe-gj9c.fr",
+    "xn--googe-gz94a.fr",
+    "xn--googe-hj4s.fr",
+    "xn--googe-ho3s.fr",
+    "xn--googe-hof.fr",
+    "xn--googe-hs99c.fr",
+    "xn--googe-j145a.fr",
+    "xn--googe-k19b.fr",
+    "xn--googe-kb5s.fr",
+    "xn--googe-kfl.fr",
+    "xn--googe-kg6b.fr",
+    "xn--googe-kx16a.fr",
+    "xn--googe-l81a.fr",
+    "xn--googe-m20s.fr",
+    "xn--googe-m261d.fr",
+    "xn--googe-mt73a.fr",
+    "xn--googe-o354a.fr",
+    "xn--googe-ow05a.fr",
+    "xn--googe-ps17b.fr",
+    "xn--googe-q19b.fr",
+    "xn--googe-q2e.fr",
+    "xn--googe-r295a.fr",
+    "xn--googe-si62d.fr",
+    "xn--googe-tbe.fr",
+    "xn--googe-tj05d.fr",
+    "xn--googe-tj26a.fr",
+    "xn--googe-tr8b.fr",
+    "xn--googe-ug0d.fr",
+    "xn--googe-w93s.fr",
+    "xn--googe-wlf.fr",
+    "xn--googe-xi19c.fr",
+    "xn--googe-xo33d.fr",
+    "xn--googe-y86s.fr",
+    "xn--googe-z123d.fr",
+    "xn--googe-zf0d.fr",
+    "xn--googl-3we.fr",
+    "xn--googl-flf.fr",
+    "xn--googl-ib8s.fr",
+    "xn--googl-l84b.fr",
+    "xn--goole-hlb.fr",
+    "xn--goole-kn0b.fr",
+    "xn--goole-tmc.fr",
+    "xn--goole-yjg.fr",
+    "xn--oogle-elb.fr",
+    "xn--oogle-hn0b.fr",
+    "xn--oogle-qmc.fr",
+    "xn--oogle-vjg.fr",
+    "yoogle.fr"
+  ],
+  "discovered_domains": [
+    {
+      "domain": "boogle.fr",
+      "unicode_domain": "boogle.fr",
+      "records": {
+        "A": [
+          "64.190.63.222"
+        ]
+      },
+      "locations": {
+        "64.190.63.222": {
+          "country": "Germany",
+          "region": "Nordrhein-Westfalen",
+          "city": "Koln",
+          "latitude": 50.9333309,
+          "longitude": 6.9453029,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [SSL: TLSV1_UNRECOGNIZED_NAME] tlsv1 unrecognized name (_ssl.c:1127)>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "foogle.fr",
+      "unicode_domain": "foogle.fr",
+      "records": {
+        "A": [
+          "157.90.33.74",
+          "157.90.33.73"
+        ]
+      },
+      "locations": {
+        "157.90.33.74": {
+          "country": "Germany",
+          "region": "Saxony",
+          "city": "Falkenstein/Vogtl.",
+          "latitude": 50.4773298,
+          "longitude": 12.3691588,
+          "isp": null,
+          "org": null
+        },
+        "157.90.33.73": {
+          "country": "Germany",
+          "region": "Saxony",
+          "city": "Falkenstein/Vogtl.",
+          "latitude": 50.4773298,
+          "longitude": 12.3691588,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://foogle.fr/",
+        "title": null
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "foogle.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "Let's Encrypt",
+          "commonName": "YR1"
+        },
+        "not_before": "Sep 27 03:29:30 2026 GMT",
+        "not_after": "Dec 26 03:29:29 2026 GMT",
+        "subject_alt_names": [
+          "*.foogle.fr",
+          "foogle.fr"
+        ]
+      }
+    },
+    {
+      "domain": "ggoogle.fr",
+      "unicode_domain": "ggoogle.fr",
+      "records": {
+        "A": [
+          "64.190.63.222"
+        ]
+      },
+      "locations": {
+        "64.190.63.222": {
+          "country": "Germany",
+          "region": "Nordrhein-Westfalen",
+          "city": "Koln",
+          "latitude": 50.9333309,
+          "longitude": 6.9453029,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "HTTP Error 403: Forbidden"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "gogole.fr",
+      "unicode_domain": "gogole.fr",
+      "records": {
+        "A": [
+          "99.83.176.46"
+        ]
+      },
+      "locations": {
+        "99.83.176.46": {
+          "country": "United States",
+          "region": "Washington",
+          "city": "Seattle",
+          "latitude": 47.6062098,
+          "longitude": -122.3320687,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error timed out>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "golgle.fr",
+      "unicode_domain": "golgle.fr",
+      "records": {
+        "A": [
+          "143.198.68.197"
+        ]
+      },
+      "locations": {
+        "143.198.68.197": {
+          "country": "United States",
+          "region": "California",
+          "city": "San Jose",
+          "latitude": 37.3393947,
+          "longitude": -121.8949575,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error timed out>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "gooble.fr",
+      "unicode_domain": "gooble.fr",
+      "records": {
+        "A": [
+          "64.190.63.222"
+        ]
+      },
+      "locations": {
+        "64.190.63.222": {
+          "country": "Germany",
+          "region": "Nordrhein-Westfalen",
+          "city": "Koln",
+          "latitude": 50.9333309,
+          "longitude": 6.9453029,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://gooble.fr/",
+        "title": "gooble.fr - Ressources et information concernant gooble Resources and Information."
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "gooble.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "DigiCert Inc",
+          "organizationalUnitName": "www.digicert.com",
+          "commonName": "Encryption Everywhere DV TLS CA - G2"
+        },
+        "not_before": "Oct 15 00:00:00 2026 GMT",
+        "not_after": "Jan 12 23:59:59 2027 GMT",
+        "subject_alt_names": [
+          "gooble.fr"
+        ]
+      }
+    },
+    {
+      "domain": "goog1e.fr",
+      "unicode_domain": "goog1e.fr",
+      "records": {
+        "A": [
+          "216.198.79.1"
+        ]
+      },
+      "locations": {
+        "216.198.79.1": {
+          "country": "United States",
+          "region": "California",
+          "city": "Los Angeles",
+          "latitude": 34.0522284,
+          "longitude": -118.2436778,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://www.goog1e.fr/",
+        "title": "Google"
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "goog1e.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "Let's Encrypt",
+          "commonName": "YR2"
+        },
+        "not_before": "Oct 27 13:45:08 2026 GMT",
+        "not_after": "Jan 25 13:45:07 2027 GMT",
+        "subject_alt_names": [
+          "goog1e.fr"
+        ]
+      }
+    },
+    {
+      "domain": "googIe.fr",
+      "unicode_domain": "googIe.fr",
+      "records": {
+        "A": [
+          "63.124.14.82"
+        ]
+      },
+      "locations": {
+        "63.124.14.82": {
+          "country": "United States",
+          "region": "Texas",
+          "city": "Dallas",
+          "latitude": 32.7830584,
+          "longitude": -96.8066716,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error timed out>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "googe.fr",
+      "unicode_domain": "googe.fr",
+      "records": {
+        "A": [
+          "104.247.81.99"
+        ]
+      },
+      "locations": {
+        "104.247.81.99": {
+          "country": "Canada",
+          "region": "Ontario",
+          "city": "Windsor",
+          "latitude": 42.3000839,
+          "longitude": -83.0165375,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://googe.fr/",
+        "title": "googe.fr"
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "googe.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "Let's Encrypt",
+          "commonName": "YE2"
+        },
+        "not_before": "Oct  4 10:35:18 2026 GMT",
+        "not_after": "Jan  2 10:35:17 2027 GMT",
+        "subject_alt_names": [
+          "*.googe.fr",
+          "googe.fr"
+        ]
+      }
+    },
+    {
+      "domain": "googel.fr",
+      "unicode_domain": "googel.fr",
+      "records": {
+        "A": [
+          "99.83.176.46"
+        ]
+      },
+      "locations": {
+        "99.83.176.46": {
+          "country": "United States",
+          "region": "Washington",
+          "city": "Seattle",
+          "latitude": 47.6062098,
+          "longitude": -122.3320687,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error timed out>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "googgle.fr",
+      "unicode_domain": "googgle.fr",
+      "records": {
+        "A": [
+          "103.224.182.240"
+        ]
+      },
+      "locations": {
+        "103.224.182.240": {
+          "country": "United States",
+          "region": "California",
+          "city": "San Diego",
+          "latitude": 32.7157121,
+          "longitude": -117.1647159,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://googgle.fr/",
+        "title": "googgle.fr"
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "doro.com.au"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "Let's Encrypt",
+          "commonName": "YE2"
+        },
+        "not_before": "Sep  9 15:52:47 2026 GMT",
+        "not_after": "Dec  8 15:52:46 2026 GMT",
+        "subject_alt_names": [
+          "*.27712809.vip",
+          "*.accountingperth.com.au",
+          "*.admin.thesweetspot.business",
+          "*.analytics.thesweetspot.business",
+          "*.app.thesweetspot.business",
+          "*.bareliftsdemo.com",
+          "*.bedsonly.com.au",
+          "*.bi.thesweetspot.business",
+          "*.bmwdeals.com.au",
+          "*.ccc456.com",
+          "*.ccc52985.top",
+          "*.ci.thesweetspot.business",
+          "*.cognifiquec.com",
+          "*.cw83.cc",
+          "*.dash.doro.com.au",
+          "*.dashboard.thesweetspot.business",
+          "*.dev.thesweetspot.business",
+          "*.developer.bareliftsdemo.com",
+          "*.developer.thaibirdnyc.co",
+          "*.doro.com.au",
+          "*.googgle.fr",
+          "*.ham87pgq56.googgle.fr",
+          "*.hawthornfootballclub.com.au",
+          "*.hostmaster.rongchangjob.com",
+          "*.imap1.bmwdeals.com.au",
+          "*.insight.thesweetspot.business",
+          "*.jeremy.net.au",
+          "*.lt.wayhoppn.online",
+          "*.maps.googgle.fr",
+          "*.mastergardenershub.vip",
+          "*.my-fundingb2b-center.info",
+          "*.my.bareliftsdemo.com",
+          "*.pckip.sbs",
+          "*.portal.thesweetspot.business",
+          "*.powerrider600.top",
+          "*.rongchangjob.com",
+          "*.smtp1.bmwdeals.com.au",
+          "*.staging.thesweetspot.business",
+          "*.thaibirdnyc.co",
+          "*.thesweetspot.business",
+          "*.uat.thesweetspot.business",
+          "*.wayhoppn.online",
+          "*.wildcard.bareliftsdemo.com",
+          "*.ww38.googgle.fr",
+          "*.yospar.sbs",
+          "27712809.vip",
+          "739a7f15-5dcf-43f7-8fd8-0edf912252e6.gynaecology.au",
+          "accountingperth.com.au",
+          "auth.gynaecology.au",
+          "autoconfig.gynaecology.au",
+          "bareliftsdemo.com",
+          "bedsonly.com.au",
+          "bmwdeals.com.au",
+          "ccc456.com",
+          "ccc52985.top",
+          "cloud.gynaecology.au",
+          "cognifiquec.com",
+          "community.gynaecology.au",
+          "cpanel.gynaecology.au",
+          "cw83.cc",
+          "d33f9266-019a-4aed-bba2-a6e381a3fdce.gynaecology.au",
+          "dashboard.gynaecology.au",
+          "dev.gynaecology.au",
+          "doro.com.au",
+          "ebdisk.gynaecology.au",
+          "emv1.gynaecology.au",
+          "f1910e66-e883-46d9-8187-15e2d4537fab.gynaecology.au",
+          "googgle.fr",
+          "gynaecology.au",
+          "hawthornfootballclub.com.au",
+          "internal.gynaecology.au",
+          "jeremy.net.au",
+          "lyncdiscover.gynaecology.au",
+          "mastergardenershub.vip",
+          "my-fundingb2b-center.info",
+          "mysql.gynaecology.au",
+          "pckip.sbs",
+          "powerrider600.top",
+          "remote.gynaecology.au",
+          "rongchangjob.com",
+          "rvmctwhz.gynaecology.au",
+          "sitemap.gynaecology.au",
+          "thaibirdnyc.co",
+          "thesweetspot.business",
+          "uyuroremote.gynaecology.au",
+          "wayhoppn.online",
+          "webdisk.gynaecology.au",
+          "www.gynaecology.au",
+          "xtfcaauth.gynaecology.au",
+          "yospar.sbs"
+        ]
+      }
+    },
+    {
+      "domain": "googie.fr",
+      "unicode_domain": "googie.fr",
+      "records": {
+        "A": [
+          "63.124.14.82"
+        ]
+      },
+      "locations": {
+        "63.124.14.82": {
+          "country": "United States",
+          "region": "Texas",
+          "city": "Dallas",
+          "latitude": 32.7830584,
+          "longitude": -96.8066716,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error timed out>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "googl.fr",
+      "unicode_domain": "googl.fr",
+      "records": {
+        "A": [
+          "76.223.54.146",
+          "13.248.169.48"
+        ]
+      },
+      "locations": {
+        "76.223.54.146": {
+          "country": "United States",
+          "region": "Washington",
+          "city": "Seattle",
+          "latitude": 47.6062098,
+          "longitude": -122.3320687,
+          "isp": null,
+          "org": null
+        },
+        "13.248.169.48": {
+          "country": "United States",
+          "region": "Washington",
+          "city": "Seattle",
+          "latitude": 47.6062073,
+          "longitude": -122.3320666,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://googl.fr/",
+        "title": null
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "googl.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "GoDaddy.com",
+          "commonName": "GoDaddy TLS Intermediate CA DV - R1v1"
+        },
+        "not_before": "May 27 14:23:47 2026 GMT",
+        "not_after": "Dec 11 14:23:47 2026 GMT",
+        "subject_alt_names": [
+          "googl.fr"
+        ]
+      }
+    },
+    {
+      "domain": "google1.fr",
+      "unicode_domain": "google1.fr",
+      "records": {
+        "A": [
+          "213.186.33.168"
+        ]
+      },
+      "locations": {
+        "213.186.33.168": {
+          "country": "France",
+          "region": "Hauts-de-France",
+          "city": "Roubaix",
+          "latitude": 50.6942104,
+          "longitude": 3.1745629,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'google1.fr'. (_ssl.c:1127)>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "google2.fr",
+      "unicode_domain": "google2.fr",
+      "records": {
+        "A": [
+          "213.186.33.5"
+        ]
+      },
+      "locations": {
+        "213.186.33.5": {
+          "country": "France",
+          "region": "Hauts-de-France",
+          "city": "Roubaix",
+          "latitude": 50.6942104,
+          "longitude": 3.1745629,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [Errno 104] Connection reset by peer>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "googlr.fr",
+      "unicode_domain": "googlr.fr",
+      "records": {
+        "A": [
+          "64.190.63.222"
+        ]
+      },
+      "locations": {
+        "64.190.63.222": {
+          "country": "Germany",
+          "region": "Nordrhein-Westfalen",
+          "city": "Koln",
+          "latitude": 50.9333309,
+          "longitude": 6.9453029,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://googlr.fr/",
+        "title": "googlr.fr - Ressources et information concernant Suchen Resources and Information."
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "googlr.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "DigiCert Inc",
+          "organizationalUnitName": "www.digicert.com",
+          "commonName": "Encryption Everywhere DV TLS CA - G2"
+        },
+        "not_before": "Oct 11 00:00:00 2026 GMT",
+        "not_after": "Jan  8 23:59:59 2027 GMT",
+        "subject_alt_names": [
+          "googlr.fr"
+        ]
+      }
+    },
+    {
+      "domain": "googlw.fr",
+      "unicode_domain": "googlw.fr",
+      "records": {
+        "A": [
+          "157.90.33.74",
+          "157.90.33.73"
+        ]
+      },
+      "locations": {
+        "157.90.33.74": {
+          "country": "Germany",
+          "region": "Saxony",
+          "city": "Falkenstein/Vogtl.",
+          "latitude": 50.4773298,
+          "longitude": 12.3691588,
+          "isp": null,
+          "org": null
+        },
+        "157.90.33.73": {
+          "country": "Germany",
+          "region": "Saxony",
+          "city": "Falkenstein/Vogtl.",
+          "latitude": 50.4773298,
+          "longitude": 12.3691588,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://googlw.fr/",
+        "title": null
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "googlw.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "Let's Encrypt",
+          "commonName": "YR1"
+        },
+        "not_before": "Sep 27 03:35:54 2026 GMT",
+        "not_after": "Dec 26 03:35:53 2026 GMT",
+        "subject_alt_names": [
+          "*.googlw.fr",
+          "googlw.fr"
+        ]
+      }
+    },
+    {
+      "domain": "googoe.fr",
+      "unicode_domain": "googoe.fr",
+      "records": {
+        "A": [
+          "70.33.246.200"
+        ]
+      },
+      "locations": {
+        "70.33.246.200": {
+          "country": "Canada",
+          "region": "Ontario",
+          "city": "Toronto",
+          "latitude": 43.706428,
+          "longitude": -79.3986419,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error timed out>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "googpe.fr",
+      "unicode_domain": "googpe.fr",
+      "records": {
+        "A": [
+          "217.160.0.6"
+        ],
+        "AAAA": [
+          "2001:8d8:100f:f000::200"
+        ]
+      },
+      "locations": {
+        "217.160.0.6": {
+          "country": "Germany",
+          "region": "Baden-Wurttemberg",
+          "city": "Mannheim",
+          "latitude": 49.4891273,
+          "longitude": 8.4669361,
+          "isp": null,
+          "org": null
+        },
+        "2001:8d8:100f:f000::200": {
+          "country": "Germany",
+          "region": "Baden-Wurttemberg",
+          "city": "Mannheim",
+          "latitude": 49.4891273,
+          "longitude": 8.4669361,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1127)>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "goolge.fr",
+      "unicode_domain": "goolge.fr",
+      "records": {
+        "A": [
+          "64.190.63.222"
+        ]
+      },
+      "locations": {
+        "64.190.63.222": {
+          "country": "Germany",
+          "region": "Nordrhein-Westfalen",
+          "city": "Koln",
+          "latitude": 50.9333309,
+          "longitude": 6.9453029,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://goolge.fr/",
+        "title": "goolge.fr - Ressources et information concernant Suchen Resources and Information."
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "goolge.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "DigiCert Inc",
+          "organizationalUnitName": "www.digicert.com",
+          "commonName": "Encryption Everywhere DV TLS CA - G2"
+        },
+        "not_before": "Oct 12 00:00:00 2026 GMT",
+        "not_after": "Jan  9 23:59:59 2027 GMT",
+        "subject_alt_names": [
+          "goolge.fr"
+        ]
+      }
+    },
+    {
+      "domain": "gooogle.fr",
+      "unicode_domain": "gooogle.fr",
+      "records": {
+        "A": [
+          "95.130.17.35"
+        ]
+      },
+      "locations": {
+        "95.130.17.35": {
+          "country": "Germany",
+          "region": "Bavaria",
+          "city": "Munich",
+          "latitude": 48.1374343,
+          "longitude": 11.5754948,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [Errno 111] Connection refused>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "gopgle.fr",
+      "unicode_domain": "gopgle.fr",
+      "records": {
+        "A": [
+          "162.4.84.255"
+        ]
+      },
+      "locations": {
+        "162.4.84.255": {
+          "country": "Australia",
+          "region": "Australian Capital Territory",
+          "city": "Canberra",
+          "latitude": -35.2834634,
+          "longitude": 149.1280674,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1127)>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "gpogle.fr",
+      "unicode_domain": "gpogle.fr",
+      "records": {
+        "A": [
+          "185.182.56.12"
+        ]
+      },
+      "locations": {
+        "185.182.56.12": {
+          "country": "Netherlands",
+          "region": "Provincie Overijssel",
+          "city": "Zwolle",
+          "latitude": 52.5124592,
+          "longitude": 6.0944378,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [Errno 113] No route to host>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "hoogle.fr",
+      "unicode_domain": "hoogle.fr",
+      "records": {
+        "A": [
+          "172.104.203.186",
+          "139.162.174.209",
+          "139.162.181.76",
+          "172.104.251.198",
+          "172.104.149.86"
+        ],
+        "AAAA": [
+          "2a01:7e01::f03c:95ff:feed:783e",
+          "2a01:7e01::f03c:95ff:feeb:9d4b",
+          "2a01:7e01::f03c:95ff:fe00:2692",
+          "2a01:7e01::f03c:95ff:fe91:5d91",
+          "2a01:7e01::2000:dff:fec1:5cdb"
+        ]
+      },
+      "locations": {
+        "172.104.203.186": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.115524,
+          "longitude": 8.6841725,
+          "isp": null,
+          "org": null
+        },
+        "139.162.174.209": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.115524,
+          "longitude": 8.6841725,
+          "isp": null,
+          "org": null
+        },
+        "139.162.181.76": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.115524,
+          "longitude": 8.6841725,
+          "isp": null,
+          "org": null
+        },
+        "172.104.251.198": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.1155207,
+          "longitude": 8.6841662,
+          "isp": null,
+          "org": null
+        },
+        "172.104.149.86": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.115524,
+          "longitude": 8.6841725,
+          "isp": null,
+          "org": null
+        },
+        "2a01:7e01::f03c:95ff:feed:783e": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.1155207,
+          "longitude": 8.6841662,
+          "isp": null,
+          "org": null
+        },
+        "2a01:7e01::f03c:95ff:feeb:9d4b": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.1155207,
+          "longitude": 8.6841662,
+          "isp": null,
+          "org": null
+        },
+        "2a01:7e01::f03c:95ff:fe00:2692": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.1155207,
+          "longitude": 8.6841662,
+          "isp": null,
+          "org": null
+        },
+        "2a01:7e01::f03c:95ff:fe91:5d91": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.1155207,
+          "longitude": 8.6841662,
+          "isp": null,
+          "org": null
+        },
+        "2a01:7e01::2000:dff:fec1:5cdb": {
+          "country": "Germany",
+          "region": "Hessen",
+          "city": "Frankfurt am Main",
+          "latitude": 50.1155207,
+          "longitude": 8.6841662,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1127)>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "oogle.fr",
+      "unicode_domain": "oogle.fr",
+      "records": {
+        "A": [
+          "164.132.235.17"
+        ],
+        "AAAA": [
+          "2001:41d0:301::23"
+        ]
+      },
+      "locations": {
+        "164.132.235.17": {
+          "country": "France",
+          "region": "Hauts-de-France",
+          "city": "Roubaix",
+          "latitude": 50.6942104,
+          "longitude": 3.1745629,
+          "isp": null,
+          "org": null
+        },
+        "2001:41d0:301::23": {
+          "country": "France",
+          "region": "Hauts-de-France",
+          "city": "Gravelines",
+          "latitude": 50.9865142,
+          "longitude": 2.128066,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "status": 200,
+        "url": "https://oogle.fr/",
+        "title": "Oogle, Microsoft Internet Explorer"
+      },
+      "certificate": {
+        "subject": {
+          "commonName": "oogle.fr"
+        },
+        "issuer": {
+          "countryName": "US",
+          "organizationName": "Let's Encrypt",
+          "commonName": "YE2"
+        },
+        "not_before": "Sep 20 09:52:29 2026 GMT",
+        "not_after": "Dec 19 09:52:28 2026 GMT",
+        "subject_alt_names": [
+          "oogle.fr"
+        ]
+      }
+    },
+    {
+      "domain": "toogle.fr",
+      "unicode_domain": "toogle.fr",
+      "records": {
+        "A": [
+          "217.160.223.237"
+        ]
+      },
+      "locations": {
+        "217.160.223.237": {
+          "country": "Germany",
+          "region": "Baden-Wurttemberg",
+          "city": "Karlsruhe",
+          "latitude": 49.0093662,
+          "longitude": 8.4044388,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "<urlopen error [SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1127)>"
+      },
+      "certificate": {}
+    },
+    {
+      "domain": "yoogle.fr",
+      "unicode_domain": "yoogle.fr",
+      "records": {
+        "A": [
+          "217.160.0.225"
+        ],
+        "AAAA": [
+          "2001:8d8:100f:f000::2b6"
+        ]
+      },
+      "locations": {
+        "217.160.0.225": {
+          "country": "Germany",
+          "region": "Baden-Wurttemberg",
+          "city": "Mannheim",
+          "latitude": 49.4891273,
+          "longitude": 8.4669361,
+          "isp": null,
+          "org": null
+        },
+        "2001:8d8:100f:f000::2b6": {
+          "country": "Germany",
+          "region": "Baden-Wurttemberg",
+          "city": "Mannheim",
+          "latitude": 49.4891273,
+          "longitude": 8.4669361,
+          "isp": null,
+          "org": null
+        }
+      },
+      "http": {
+        "error": "HTTP Error 403: Forbidden"
+      },
+      "certificate": {}
+    }
+  ]
+}
