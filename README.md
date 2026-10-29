@@ -8,12 +8,28 @@ including Unicode confusables from the official Unicode `confusables.txt` data,
 checks them with `dig`, optionally looks up IP geolocation, checks HTTPS pages,
 and extracts TLS certificate information.
 
+## Interpreting the results
+
+The results are indicators, not proof that typosquatting exists or that a
+domain is malicious. A generated lookalike domain, DNS record, web page, or
+certificate only shows that the domain may exist and deserves further
+investigation. Domains can be registered for legitimate reasons, and the
+absence of a DNS or HTTPS result does not prove that no typosquatting is
+occurring. Always validate findings with additional context and, where
+appropriate, manual or legal investigation.
+
 ```bash
 python3 typ0.py example.com --output report.json
 ```
 
-By default, variants keep the TLD of the input domain. To test a selected set
-of TLDs, use a comma-separated list:
+By default, variants keep the TLD of the input domain. To test the input TLD
+plus the 15 most common TLDs, use:
+
+```bash
+python3 typ0.py example.com --output report.json --top-tlds
+```
+
+To test a selected list of TLDs, use a comma-separated argument:
 
 ```bash
 python3 typ0.py example.com --output report.json --tlds com,net,org,fr
@@ -48,7 +64,8 @@ and a progress bar based on the number of candidates, IPs, or certificates
 processed. The report-writing step is always displayed as the final step.
 
 Only the first label of the supplied domain is mutated; its suffix is preserved
-unless `--tlds` or `--all-tlds` is used.
+unless `--top-tlds`, `--tlds`, or `--all-tlds` is used. The TLD selection
+options are mutually exclusive.
 The generated mutations include character omissions, repetitions, adjacent
 keyboard substitutions, transpositions, hyphen insertion, appended digits, and
 Unicode confusable substitutions. Unicode candidates are converted to IDNA
