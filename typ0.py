@@ -488,6 +488,42 @@ def run_with_progress(
     return result
 
 
+def print_summary(source: str, candidates: list[str], results: list[DomainResult],
+                  steps: tuple[str, ...]) -> None:
+    """Print the small set of findings most useful at the end of a run."""
+
+    dns_domains = [
+        result for result in results
+        if result.records.get("A") or result.records.get("AAAA")
+        or result.records.get("CNAME")
+    ]
+    https_domains = [
+        result for result in results
+        if result.http and "error" not in result.http
+    ]
+    certificate_domains = [
+        result for result in results
+        if result.certificate and "error" not in result.certificate
+    ]
+
+    print("\nSummary")
+    print(f"  Source domain: {source}")
+    print(f"  Candidates generated: {len(candidates)}")
+    if "dns" in steps:
+        print(f"  Domains with DNS records: {len(dns_domains)}")
+    if "http" in steps:
+        print(f"  HTTPS sites found: {len(https_domains)}")
+    if "cert" in steps:
+        print(f"  TLS certificates retrieved: {len(certificate_domains)}")
+    if dns_domains:
+        print("  Domains requiring review:")
+        for result in dns_domains[:10]:
+            print(f"    - {result.domain}")
+        if len(dns_domains) > 10:
+            print(f"    ... and {len(dns_domains) - 10} more")
+    print("  Note: these findings indicate possibilities, not proof of typosquatting.")
+
+
 def main() -> int:
     """Coordinate generation, discovery steps, and report creation."""
 
@@ -584,6 +620,7 @@ def main() -> int:
             args.confusables_url, tlds,
         )
         print(f"Report written to {args.output}")
+        print_summary(source, candidates, results, steps)
         return 0
     except (ValueError, OSError, URLError) as exc:
         print(f"typ0: error: {exc}", file=sys.stderr)
