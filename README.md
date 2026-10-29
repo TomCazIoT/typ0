@@ -60,6 +60,19 @@ mirror or a local HTTP server.
 Network operations use a ten-second timeout, except the Unicode source download,
 which uses fifteen seconds.
 
+Network checks run concurrently with a bounded worker pool. Use `--workers` to
+control the maximum number of simultaneous tasks; it defaults to 8:
+
+```bash
+python3 typ0.py example.com --output report.json --top-tlds --workers 4
+```
+
+Each discovered domain receives a heuristic review-priority score from 0 to
+100. The score combines name similarity, mutation patterns, DNS records,
+HTTPS availability, and certificate metadata. It does not compare website
+content, and it is not a risk determination or proof of typosquatting; use it
+only to prioritize manual review.
+
 During execution, typ0 displays the current step, its position in the workflow,
 and a progress bar based on the number of candidates, IPs, or certificates
 processed. The report-writing step is always displayed as the final step.
@@ -68,6 +81,8 @@ Only the first label of the supplied domain is mutated; its suffix is preserved
 unless `--top-tlds`, `--tlds`, or `--all-tlds` is used. The TLD selection
 options are mutually exclusive.
 The generated mutations include character omissions, repetitions, adjacent
-keyboard substitutions, transpositions, hyphen insertion, appended digits, and
-Unicode confusable substitutions. Unicode candidates are converted to IDNA
-(punycode) before DNS and HTTPS requests; both forms are included in the report.
+keyboard substitutions, letter/digit lookalikes such as `o/0` and `l/1`,
+transpositions, hyphen insertion, appended digits, common security-related
+prefixes and suffixes, and Unicode confusable substitutions. Unicode
+candidates are converted to IDNA (punycode) before DNS and HTTPS requests;
+both forms are included in the report.

@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from difflib import SequenceMatcher
 import json
 import shutil
 import socket
@@ -24,6 +26,7 @@ DEFAULT_STEPS = ("generate", "dns", "geo", "http", "cert")
 STEP_NAMES = ("generate", "dns", "geo", "http", "cert")
 CONFUSABLES_URL = "https://www.unicode.org/Public/security/latest/confusables.txt"
 TLD_LIST_URL = "https://data.iana.org/TLD/tlds-alpha-by-domain.txt"
+DEFAULT_MAX_WORKERS = 8
 # Common generic and country-code TLDs used for broad typosquatting checks.
 TOP_TLDS = (
     "com", "fr", "net", "org", "de", "uk", "cn", "ru",
@@ -37,6 +40,15 @@ KEYBOARD_NEIGHBORS = {
     "l": "kop", "z": "asx", "x": "zsdc", "c": "xdfv",
     "v": "cfgb", "b": "vghn", "n": "bhjm", "m": "njk",
 }
+# Common substitutions where a letter and a digit look similar in a domain
+# name. Each replacement is applied one character at a time.
+CHARACTER_LOOKALIKES = {
+    "a": "4", "e": "3", "g": "9", "i": "1", "l": "1",
+    "o": "0", "s": "5", "t": "7", "b": "8",
+}
+# These terms are common in deceptive lookalike domains. They are kept small
+# and explicit so candidate generation remains predictable.
+COMMON_DOMAIN_TERMS = ("account", "login", "secure", "support", "verify")
 ProgressCallback = Callable[[int, int], None]
 
 
@@ -50,6 +62,9 @@ class DomainResult:
     locations: dict[str, dict[str, Any]] = field(default_factory=dict)
     http: dict[str, Any] = field(default_factory=dict)
     certificate: dict[str, Any] = field(default_factory=dict)
+    review_score: int | None = None
+    review_priority: str | None = None
+    review_reasons: list[str] = field(default_factory=list)
 
 
 class TitleParser(HTMLParser):
@@ -192,6 +207,8 @@ def generate_candidates(
         if name[index].isalpha():
             for replacement in KEYBOARD_NEIGHBORS.get(name[index], ""):
                 candidates.add(name[:index] + replacement + name[index + 1:])
+            for replacement in CHARACTER_LOOKALIKES.get(name[index], ""):
+                candidates.add(name[:index] + replacement + name[index + 1:])
         if index + 1 < len(name) and name[index] != name[index + 1]:
             swapped = list(name)
             swapped[index], swapped[index + 1] = swapped[index + 1], swapped[index]
@@ -200,6 +217,9 @@ def generate_candidates(
         candidates.add(name[:index] + "-" + name[index:])
     for character in "0123456789":
         candidates.add(name + character)
+    for term in COMMON_DOMAIN_TERMS:
+        candidates.add(f"{term}-{name}")
+        candidates.add(f"{name}-{term}")
     for index, character in enumerate(name):
         for replacement in confusables.get(character, ()):
             candidates.add(name[:index] + replacement + name[index + 1:])
@@ -257,11 +277,14 @@ def resolve_dns(
     domains: list[str],
     unicode_domains: dict[str, str],
     progress: ProgressCallback | None = None,
+    max_workers: int = DEFAULT_MAX_WORKERS,
 ) -> list[DomainResult]:
     """Resolve candidates and retain only domains with at least one record."""
 
     results = [DomainResult(domain, unicode_domains.get(domain)) for domain in domains]
-    for index, result in enumerate(results, 1):
+    if not results:
+        return []
+    def resolve_one(result: DomainResult) -> DomainResult:
         for record_type in ("A", "AAAA", "CNAME"):
             try:
                 values = run_dig(result.domain, record_type)
@@ -272,10 +295,21 @@ def resolve_dns(
                 break
             if values:
                 result.records[record_type] = values
-        if result.records.get("A") or result.records.get("AAAA") or result.records.get("CNAME"):
-            print(f"DNS found: {result.domain} -> {result.records}")
-        if progress:
-            progress(index, len(results))
+        return result
+
+    completed = 0
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(results))) as executor:
+        futures = {executor.submit(resolve_one, result): index
+                   for index, result in enumerate(results)}
+        for future in as_completed(futures):
+            index = futures[future]
+            results[index] = future.result()
+            result = results[index]
+            if result.records.get("A") or result.records.get("AAAA") or result.records.get("CNAME"):
+                print(f"DNS found: {result.domain} -> {result.records}")
+            completed += 1
+            if progress:
+                progress(completed, len(results))
     return [result for result in results if result.records.get("A") or result.records.get("AAAA")
             or result.records.get("CNAME")]
 
@@ -294,7 +328,8 @@ def lookup_location(ip: str) -> dict[str, Any]:
     }
 
 
-def collect_locations(results: list[DomainResult], progress: ProgressCallback | None = None) -> None:
+def collect_locations(results: list[DomainResult], progress: ProgressCallback | None = None,
+                      max_workers: int = DEFAULT_MAX_WORKERS) -> None:
     """Add geolocation data to each A and AAAA address found by DNS."""
 
     total_ips = sum(
@@ -302,19 +337,32 @@ def collect_locations(results: list[DomainResult], progress: ProgressCallback | 
         for result in results
         for record_type in ("A", "AAAA")
     )
-    processed_ips = 0
-    for result in results:
-        for record_type in ("A", "AAAA"):
-            for ip in result.records.get(record_type, []):
-                try:
-                    result.locations[ip] = lookup_location(str(ip_address(ip)))
-                except (URLError, OSError, RuntimeError, ValueError) as exc:
-                    # Keep the failure beside the address so the report remains
-                    # useful and the rest of the batch can continue.
-                    result.locations[ip] = {"error": str(exc)}
-                processed_ips += 1
-                if progress:
-                    progress(processed_ips, total_ips)
+    tasks = [
+        (result, ip)
+        for result in results
+        for record_type in ("A", "AAAA")
+        for ip in result.records.get(record_type, [])
+    ]
+    if not tasks:
+        return
+
+    def lookup(item: tuple[DomainResult, str]) -> tuple[DomainResult, str, dict[str, Any]]:
+        result, ip = item
+        try:
+            location = lookup_location(str(ip_address(ip)))
+        except (URLError, OSError, RuntimeError, ValueError) as exc:
+            # Keep the failure beside the address so the report remains useful
+            # and the rest of the batch can continue.
+            location = {"error": str(exc)}
+        return result, ip, location
+
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(tasks))) as executor:
+        futures = [executor.submit(lookup, task) for task in tasks]
+        for processed_ips, future in enumerate(as_completed(futures), 1):
+            result, ip, location = future.result()
+            result.locations[ip] = location
+            if progress:
+                progress(processed_ips, total_ips)
 
 
 def fetch_site(domain: str) -> dict[str, Any]:
@@ -334,17 +382,29 @@ def fetch_site(domain: str) -> dict[str, Any]:
         }
 
 
-def collect_http(results: list[DomainResult], progress: ProgressCallback | None = None) -> None:
+def collect_http(results: list[DomainResult], progress: ProgressCallback | None = None,
+                 max_workers: int = DEFAULT_MAX_WORKERS) -> None:
     """Probe the HTTPS endpoint for every DNS-discovered domain."""
 
-    for index, result in enumerate(results, 1):
+    if not results:
+        return
+
+    def fetch(result: DomainResult) -> tuple[DomainResult, dict[str, Any]]:
         try:
-            result.http = fetch_site(result.domain)
-            print(f"HTTPS site found: {result.domain} ({result.http.get('title') or 'no title'})")
+            response = fetch_site(result.domain)
         except (URLError, OSError, ValueError) as exc:
-            result.http = {"error": str(exc)}
-        if progress:
-            progress(index, len(results))
+            response = {"error": str(exc)}
+        return result, response
+
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(results))) as executor:
+        futures = [executor.submit(fetch, result) for result in results]
+        for index, future in enumerate(as_completed(futures), 1):
+            result, response = future.result()
+            result.http = response
+            if "error" not in response:
+                print(f"HTTPS site found: {result.domain} ({response.get('title') or 'no title'})")
+            if progress:
+                progress(index, len(results))
 
 
 def extract_certificate(domain: str) -> dict[str, Any]:
@@ -366,20 +426,98 @@ def extract_certificate(domain: str) -> dict[str, Any]:
     }
 
 
-def collect_certificates(results: list[DomainResult], progress: ProgressCallback | None = None) -> None:
+def collect_certificates(results: list[DomainResult], progress: ProgressCallback | None = None,
+                         max_workers: int = DEFAULT_MAX_WORKERS) -> None:
     """Collect certificates only for domains whose HTTPS probe succeeded."""
 
-    for index, result in enumerate(results, 1):
-        if "error" in result.http:
-            if progress:
-                progress(index, len(results))
-            continue
-        try:
-            result.certificate = extract_certificate(result.domain)
-        except (OSError, ssl.SSLError, ValueError) as exc:
-            result.certificate = {"error": str(exc)}
+    eligible = [result for result in results if "error" not in result.http]
+    if not eligible:
         if progress:
-            progress(index, len(results))
+            for index in range(1, len(results) + 1):
+                progress(index, len(results))
+        return
+
+    def fetch(result: DomainResult) -> tuple[DomainResult, dict[str, Any]]:
+        try:
+            certificate = extract_certificate(result.domain)
+        except (OSError, ssl.SSLError, ValueError) as exc:
+            certificate = {"error": str(exc)}
+        return result, certificate
+
+    completed = 0
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(eligible))) as executor:
+        futures = {executor.submit(fetch, result): result for result in eligible}
+        for future in as_completed(futures):
+            result, certificate = future.result()
+            result.certificate = certificate
+            completed += 1
+            if progress:
+                progress(completed, len(results))
+    if progress:
+        for _ in range(len(results) - len(eligible)):
+            completed += 1
+            progress(completed, len(results))
+
+
+def score_domain(source: str, result: DomainResult) -> None:
+    """Assign a heuristic review-priority score without comparing site content."""
+
+    source_name = source.split(".", 1)[0]
+    candidate_name = result.domain.split(".", 1)[0]
+    similarity = SequenceMatcher(None, source_name, candidate_name).ratio()
+    score = round(similarity * 35)
+    reasons = [f"name similarity: {round(similarity * 100)}%"]
+
+    mutation_score = 0
+    if any(character in candidate_name for character in "0123456789"):
+        mutation_score += 4
+        reasons.append("letter/digit lookalike or appended digit")
+    if any(term in candidate_name.split("-") for term in COMMON_DOMAIN_TERMS):
+        mutation_score += 4
+        reasons.append("common security-related term")
+    if "-" in candidate_name:
+        mutation_score += 2
+        reasons.append("hyphen insertion")
+    if result.unicode_domain and result.unicode_domain != result.domain:
+        mutation_score += 4
+        reasons.append("Unicode lookalike")
+    if len(candidate_name) == len(source_name) and candidate_name != source_name:
+        mutation_score += 3
+        reasons.append("character substitution or transposition")
+    score += min(mutation_score, 15)
+
+    if result.records.get("A") or result.records.get("AAAA"):
+        score += 10
+        reasons.append("A/AAAA record found")
+    if result.records.get("CNAME"):
+        score += 5
+        reasons.append("CNAME record found")
+    if result.http and "error" not in result.http:
+        score += 10
+        reasons.append("HTTPS site reachable")
+    if result.certificate and "error" not in result.certificate:
+        score += 2
+        reasons.append("TLS certificate retrieved")
+        subject_alt_names = result.certificate.get("subject_alt_names", [])
+        if source in subject_alt_names:
+            score += 8
+            reasons.append("source domain appears in certificate SANs")
+
+    result.review_score = min(score, 100)
+    result.review_priority = (
+        "very_high" if score >= 75 else
+        "high" if score >= 50 else
+        "medium" if score >= 25 else
+        "low"
+    )
+    result.review_reasons = reasons
+
+
+def score_results(source: str, results: list[DomainResult]) -> None:
+    """Score each result after all requested discovery steps have completed."""
+
+    for result in results:
+        score_domain(source, result)
 
 
 def write_report(path: Path, source: str, candidates: list[str],
@@ -431,6 +569,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--tld-list-url", default=TLD_LIST_URL,
         help="IANA TLD list URL used with --all-tlds",
+    )
+    parser.add_argument(
+        "--workers", type=int, default=DEFAULT_MAX_WORKERS,
+        help=f"maximum number of concurrent network tasks (default: {DEFAULT_MAX_WORKERS})",
     )
     return parser.parse_args()
 
@@ -517,8 +659,13 @@ def print_summary(source: str, candidates: list[str], results: list[DomainResult
         print(f"  TLS certificates retrieved: {len(certificate_domains)}")
     if dns_domains:
         print("  Domains requiring review:")
-        for result in dns_domains[:10]:
-            print(f"    - {result.domain}")
+        for result in sorted(
+            dns_domains, key=lambda item: item.review_score or 0, reverse=True
+        )[:10]:
+            print(
+                f"    - {result.domain} "
+                f"(score: {result.review_score}/100, {result.review_priority})"
+            )
         if len(dns_domains) > 10:
             print(f"    ... and {len(dns_domains) - 10} more")
     print("  Note: these findings indicate possibilities, not proof of typosquatting.")
@@ -530,6 +677,8 @@ def main() -> int:
     args = parse_args()
     try:
         source = normalize_domain(args.domain)
+        if args.workers < 1:
+            raise ValueError("--workers must be at least 1")
         steps = tuple(step for step in STEP_NAMES if step in args.steps)
         total_steps = len(steps) + 1
         current_step = 0
@@ -576,7 +725,9 @@ def main() -> int:
             results = run_with_progress(
                 "DNS candidates",
                 len(candidates),
-                lambda progress: resolve_dns(candidates, unicode_domains, progress),
+                lambda progress: resolve_dns(
+                    candidates, unicode_domains, progress, args.workers
+                ),
             )
             print(f"    Found DNS records for {len(results)} domain(s).")
         if "geo" in steps:
@@ -589,7 +740,7 @@ def main() -> int:
             run_with_progress(
                 "IP addresses",
                 location_total,
-                lambda progress: collect_locations(results, progress),
+                lambda progress: collect_locations(results, progress, args.workers),
             )
             location_count = sum(len(result.locations) for result in results)
             print(f"    Processed {location_count} IP address(es).")
@@ -598,7 +749,7 @@ def main() -> int:
             run_with_progress(
                 "HTTPS candidates",
                 len(results),
-                lambda progress: collect_http(results, progress),
+                lambda progress: collect_http(results, progress, args.workers),
             )
             available_count = sum("error" not in result.http for result in results)
             print(f"    Found {available_count} HTTPS site(s).")
@@ -607,13 +758,14 @@ def main() -> int:
             run_with_progress(
                 "Certificates",
                 len(results),
-                lambda progress: collect_certificates(results, progress),
+                lambda progress: collect_certificates(results, progress, args.workers),
             )
             certificate_count = sum(
                 bool(result.certificate) and "error" not in result.certificate
                 for result in results
             )
             print(f"    Retrieved {certificate_count} certificate(s).")
+        score_results(source, results)
         start_step("Report", f"writing results to {args.output}")
         write_report(
             args.output, source, candidates, results, steps,
