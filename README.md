@@ -77,6 +77,12 @@ During execution, typ0 displays the current step, its position in the workflow,
 and a progress bar based on the number of candidates, IPs, or certificates
 processed. The report-writing step is always displayed as the final step.
 
+Run the automated tests with:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
 Only the first label of the supplied domain is mutated; its suffix is preserved
 unless `--top-tlds`, `--tlds`, or `--all-tlds` is used. The TLD selection
 options are mutually exclusive.
