@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from difflib import SequenceMatcher
 import json
 import shutil
 import socket
@@ -61,6 +62,9 @@ class DomainResult:
     locations: dict[str, dict[str, Any]] = field(default_factory=dict)
     http: dict[str, Any] = field(default_factory=dict)
     certificate: dict[str, Any] = field(default_factory=dict)
+    review_score: int | None = None
+    review_priority: str | None = None
+    review_reasons: list[str] = field(default_factory=list)
 
 
 class TitleParser(HTMLParser):
@@ -455,6 +459,67 @@ def collect_certificates(results: list[DomainResult], progress: ProgressCallback
             progress(completed, len(results))
 
 
+def score_domain(source: str, result: DomainResult) -> None:
+    """Assign a heuristic review-priority score without comparing site content."""
+
+    source_name = source.split(".", 1)[0]
+    candidate_name = result.domain.split(".", 1)[0]
+    similarity = SequenceMatcher(None, source_name, candidate_name).ratio()
+    score = round(similarity * 35)
+    reasons = [f"name similarity: {round(similarity * 100)}%"]
+
+    mutation_score = 0
+    if any(character in candidate_name for character in "0123456789"):
+        mutation_score += 4
+        reasons.append("letter/digit lookalike or appended digit")
+    if any(term in candidate_name.split("-") for term in COMMON_DOMAIN_TERMS):
+        mutation_score += 4
+        reasons.append("common security-related term")
+    if "-" in candidate_name:
+        mutation_score += 2
+        reasons.append("hyphen insertion")
+    if result.unicode_domain and result.unicode_domain != result.domain:
+        mutation_score += 4
+        reasons.append("Unicode lookalike")
+    if len(candidate_name) == len(source_name) and candidate_name != source_name:
+        mutation_score += 3
+        reasons.append("character substitution or transposition")
+    score += min(mutation_score, 15)
+
+    if result.records.get("A") or result.records.get("AAAA"):
+        score += 10
+        reasons.append("A/AAAA record found")
+    if result.records.get("CNAME"):
+        score += 5
+        reasons.append("CNAME record found")
+    if result.http and "error" not in result.http:
+        score += 10
+        reasons.append("HTTPS site reachable")
+    if result.certificate and "error" not in result.certificate:
+        score += 2
+        reasons.append("TLS certificate retrieved")
+        subject_alt_names = result.certificate.get("subject_alt_names", [])
+        if source in subject_alt_names:
+            score += 8
+            reasons.append("source domain appears in certificate SANs")
+
+    result.review_score = min(score, 100)
+    result.review_priority = (
+        "very_high" if score >= 75 else
+        "high" if score >= 50 else
+        "medium" if score >= 25 else
+        "low"
+    )
+    result.review_reasons = reasons
+
+
+def score_results(source: str, results: list[DomainResult]) -> None:
+    """Score each result after all requested discovery steps have completed."""
+
+    for result in results:
+        score_domain(source, result)
+
+
 def write_report(path: Path, source: str, candidates: list[str],
                  results: list[DomainResult], steps: tuple[str, ...],
                  confusables_url: str, tlds: list[str]) -> None:
@@ -594,8 +659,13 @@ def print_summary(source: str, candidates: list[str], results: list[DomainResult
         print(f"  TLS certificates retrieved: {len(certificate_domains)}")
     if dns_domains:
         print("  Domains requiring review:")
-        for result in dns_domains[:10]:
-            print(f"    - {result.domain}")
+        for result in sorted(
+            dns_domains, key=lambda item: item.review_score or 0, reverse=True
+        )[:10]:
+            print(
+                f"    - {result.domain} "
+                f"(score: {result.review_score}/100, {result.review_priority})"
+            )
         if len(dns_domains) > 10:
             print(f"    ... and {len(dns_domains) - 10} more")
     print("  Note: these findings indicate possibilities, not proof of typosquatting.")
@@ -695,6 +765,7 @@ def main() -> int:
                 for result in results
             )
             print(f"    Retrieved {certificate_count} certificate(s).")
+        score_results(source, results)
         start_step("Report", f"writing results to {args.output}")
         write_report(
             args.output, source, candidates, results, steps,

@@ -67,6 +67,12 @@ control the maximum number of simultaneous tasks; it defaults to 8:
 python3 typ0.py example.com --output report.json --top-tlds --workers 4
 ```
 
+Each discovered domain receives a heuristic review-priority score from 0 to
+100. The score combines name similarity, mutation patterns, DNS records,
+HTTPS availability, and certificate metadata. It does not compare website
+content, and it is not a risk determination or proof of typosquatting; use it
+only to prioritize manual review.
+
 During execution, typ0 displays the current step, its position in the workflow,
 and a progress bar based on the number of candidates, IPs, or certificates
 processed. The report-writing step is always displayed as the final step.
