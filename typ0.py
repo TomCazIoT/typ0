@@ -300,6 +300,7 @@ def resolve_dns(
     unicode_domains: dict[str, str],
     progress: ProgressCallback | None = None,
     max_workers: int = DEFAULT_MAX_WORKERS,
+    verbose: bool = False,
 ) -> list[DomainResult]:
     """Resolve candidates and retain only domains with at least one record."""
 
@@ -327,7 +328,11 @@ def resolve_dns(
             index = futures[future]
             results[index] = future.result()
             result = results[index]
-            if result.records.get("A") or result.records.get("AAAA") or result.records.get("CNAME"):
+            if verbose and (
+                result.records.get("A")
+                or result.records.get("AAAA")
+                or result.records.get("CNAME")
+            ):
                 print(f"DNS found: {result.domain} -> {result.records}")
             completed += 1
             if progress:
@@ -405,7 +410,7 @@ def fetch_site(domain: str) -> dict[str, Any]:
 
 
 def collect_http(results: list[DomainResult], progress: ProgressCallback | None = None,
-                 max_workers: int = DEFAULT_MAX_WORKERS) -> None:
+                 max_workers: int = DEFAULT_MAX_WORKERS, verbose: bool = False) -> None:
     """Probe the HTTPS endpoint for every DNS-discovered domain."""
 
     if not results:
@@ -423,7 +428,7 @@ def collect_http(results: list[DomainResult], progress: ProgressCallback | None 
         for index, future in enumerate(as_completed(futures), 1):
             result, response = future.result()
             result.http = response
-            if "error" not in response:
+            if verbose and "error" not in response:
                 print(f"HTTPS site found: {result.domain} ({response.get('title') or 'no title'})")
             if progress:
                 progress(index, len(results))
@@ -596,6 +601,10 @@ def parse_args() -> argparse.Namespace:
         "--workers", type=int, default=DEFAULT_MAX_WORKERS,
         help=f"maximum number of concurrent network tasks (default: {DEFAULT_MAX_WORKERS})",
     )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="display intermediate results and the final summary",
+    )
     return parser.parse_args()
 
 
@@ -739,7 +748,7 @@ def main() -> int:
         # form is retained for readers of the report.
         unicode_domains = {to_idna_domain(candidate): candidate for candidate in unicode_candidates}
         candidates = sorted(unicode_domains)
-        if "generate" in steps:
+        if args.verbose and "generate" in steps:
             print(f"    Generated {len(candidates)} candidate domain(s).")
         results = [DomainResult(domain, unicode_domains.get(domain)) for domain in candidates]
         if "dns" in steps:
@@ -748,10 +757,11 @@ def main() -> int:
                 "DNS candidates",
                 len(candidates),
                 lambda progress: resolve_dns(
-                    candidates, unicode_domains, progress, args.workers
+                    candidates, unicode_domains, progress, args.workers, args.verbose
                 ),
             )
-            print(f"    Found DNS records for {len(results)} domain(s).")
+            if args.verbose:
+                print(f"    Found DNS records for {len(results)} domain(s).")
         if "geo" in steps:
             start_step("Geolocation", f"looking up IP addresses for {len(results)} domain(s)")
             location_total = sum(
@@ -765,16 +775,20 @@ def main() -> int:
                 lambda progress: collect_locations(results, progress, args.workers),
             )
             location_count = sum(len(result.locations) for result in results)
-            print(f"    Processed {location_count} IP address(es).")
+            if args.verbose:
+                print(f"    Processed {location_count} IP address(es).")
         if "http" in steps:
             start_step("HTTPS", f"checking {len(results)} discovered domain(s)")
             run_with_progress(
                 "HTTPS candidates",
                 len(results),
-                lambda progress: collect_http(results, progress, args.workers),
+                lambda progress: collect_http(
+                    results, progress, args.workers, args.verbose
+                ),
             )
             available_count = sum("error" not in result.http for result in results)
-            print(f"    Found {available_count} HTTPS site(s).")
+            if args.verbose:
+                print(f"    Found {available_count} HTTPS site(s).")
         if "cert" in steps:
             start_step("Certificates", f"retrieving certificates for {len(results)} domain(s)")
             run_with_progress(
@@ -786,7 +800,8 @@ def main() -> int:
                 bool(result.certificate) and "error" not in result.certificate
                 for result in results
             )
-            print(f"    Retrieved {certificate_count} certificate(s).")
+            if args.verbose:
+                print(f"    Retrieved {certificate_count} certificate(s).")
         score_results(source, results)
         start_step("Report", f"writing results to {args.output}")
         write_report(

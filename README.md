@@ -59,6 +59,14 @@ control the maximum number of simultaneous tasks; it defaults to 8:
 python3 typ0.py example.com --output report.json --top-tlds --workers 4
 ```
 
+By default, the console displays the workflow steps, their progress bars, and
+the final summary. Intermediate findings are hidden. Use `--verbose` to display
+those findings as they are collected:
+
+```bash
+python3 typ0.py example.com --output report.json --verbose
+```
+
 Each discovered domain receives a heuristic review-priority score from 0 to
 100. The score combines name similarity, mutation patterns, DNS records,
 HTTPS availability, and certificate metadata. It does not compare website
