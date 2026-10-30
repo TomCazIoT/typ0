@@ -72,12 +72,6 @@ those findings as they are collected:
 python3 typ0.py example.com --output report.json --verbose
 ```
 
-Each discovered domain receives a heuristic review-priority score from 0 to
-100. The score combines name similarity, mutation patterns, DNS records,
-HTTPS availability, and certificate metadata. It does not compare website
-content, and it is not a risk determination or proof of typosquatting; use it
-only to prioritize manual review.
-
 During execution, typ0 displays the current step, its position in the workflow,
 and a progress bar based on the number of candidates, IPs, or certificates
 processed. The report-writing step is always displayed as the final step.
@@ -91,6 +85,36 @@ transpositions, hyphen insertion, appended digits, common security-related
 prefixes and suffixes, and Unicode confusable substitutions. Unicode
 candidates are converted to IDNA (punycode) before DNS and HTTPS requests;
 both forms are included in the report.
+
+## Score calculation
+
+The score is calculated independently for each discovered domain. It starts
+with the similarity between the first label of the source domain and the first
+label of the candidate, measured with `SequenceMatcher`:
+
+| Signal | Points |
+| --- | ---: |
+| Name similarity | 0 to 35, based on the similarity ratio |
+| Digit lookalike or appended digit | +4 |
+| Common security-related term (`account`, `login`, `secure`, `support`, or `verify`) | +4 |
+| Hyphen in the candidate name | +2 |
+| Unicode lookalike | +4 |
+| Same-length character substitution or transposition | +3 |
+| Mutation subtotal | Maximum +15 |
+| `A` or `AAAA` DNS record | +10 |
+| `CNAME` DNS record | +5 |
+| `MX` DNS record | +8 |
+| Reachable HTTPS site | +10 |
+| TLS certificate retrieved | +2 |
+| Source domain present in the certificate SANs | +8 |
+
+The final total is capped at 100. The review priority is assigned from that
+total: `low` below 25, `medium` from 25 to 49, `high` from 50 to 74, and
+`very_high` from 75 to 100. A signal only contributes points when the
+corresponding observation is available; for example, skipping the `http` step
+means that HTTPS availability cannot add points. The score is a triage aid,
+not a probability, a verdict, or proof that a domain is malicious.
+
 
 ## Interpreting the results
 
