@@ -43,11 +43,15 @@ class DNSResolutionTests(unittest.TestCase):
     @patch.object(
         typ0.subprocess,
         "run",
-        return_value=type("Completed", (), {
-            "returncode": 0,
-            "stdout": "192.0.2.1.\n",
-            "stderr": "",
-        })(),
+        return_value=type(
+            "Completed",
+            (),
+            {
+                "returncode": 0,
+                "stdout": "192.0.2.1.\n",
+                "stderr": "",
+            },
+        )(),
     )
     def test_prefers_dig_when_available(self, run, which) -> None:
         self.assertEqual(
@@ -61,11 +65,15 @@ class DNSResolutionTests(unittest.TestCase):
     @patch.object(
         typ0.subprocess,
         "run",
-        return_value=type("Completed", (), {
-            "returncode": 0,
-            "stdout": "10 mail.example.com.\n",
-            "stderr": "",
-        })(),
+        return_value=type(
+            "Completed",
+            (),
+            {
+                "returncode": 0,
+                "stdout": "10 mail.example.com.\n",
+                "stderr": "",
+            },
+        )(),
     )
     def test_resolves_mx_records_with_dig(self, run, _which) -> None:
         self.assertEqual(
