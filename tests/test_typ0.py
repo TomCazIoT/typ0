@@ -38,6 +38,67 @@ class DomainParsingTests(unittest.TestCase):
             typ0.parse_tlds(" , . ")
 
 
+class DNSResolutionTests(unittest.TestCase):
+    @patch.object(typ0.shutil, "which", return_value="/usr/bin/dig")
+    @patch.object(
+        typ0.subprocess,
+        "run",
+        return_value=type("Completed", (), {
+            "returncode": 0,
+            "stdout": "192.0.2.1.\n",
+            "stderr": "",
+        })(),
+    )
+    def test_prefers_dig_when_available(self, run, which) -> None:
+        self.assertEqual(
+            typ0.resolve_dns_record("example.com", "A"),
+            ["192.0.2.1"],
+        )
+        which.assert_called_once_with("dig")
+        run.assert_called_once()
+
+    @patch.object(
+        typ0.shutil,
+        "which",
+        return_value=None,
+    )
+    @patch.object(
+        typ0.socket,
+        "getaddrinfo",
+        return_value=[
+            (typ0.socket.AF_INET, 1, 6, "", ("192.0.2.1", 0)),
+            (typ0.socket.AF_INET, 1, 6, "", ("192.0.2.1", 0)),
+        ],
+    )
+    def test_resolves_a_records_without_dig(self, _getaddrinfo, _which) -> None:
+        self.assertEqual(
+            typ0.resolve_dns_record("example.com", "A"),
+            ["192.0.2.1"],
+        )
+
+    @patch.object(
+        typ0.shutil,
+        "which",
+        return_value=None,
+    )
+    @patch.object(
+        typ0.socket,
+        "gethostbyname_ex",
+        return_value=("example.com", ["alias.example.com."], ["192.0.2.1"]),
+    )
+    def test_resolves_cname_aliases_from_standard_library(
+        self, _gethostbyname_ex, _which
+    ) -> None:
+        self.assertEqual(
+            typ0.resolve_dns_record("example.com", "CNAME"),
+            ["alias.example.com"],
+        )
+
+    def test_rejects_unsupported_record_type(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unsupported DNS record type"):
+            typ0.resolve_dns_record("example.com", "MX")
+
+
 class CandidateGenerationTests(unittest.TestCase):
     @patch.object(typ0, "load_confusables", return_value={})
     def test_generates_multiple_mutation_families(self, _load_confusables) -> None:

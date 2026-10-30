@@ -253,28 +253,46 @@ def generate_candidates(
     return sorted(valid)
 
 
-def run_dig(domain: str, record_type: str) -> list[str]:
-    """Query one DNS record type through the external ``dig`` command."""
+def resolve_dns_record(domain: str, record_type: str) -> list[str]:
+    """Query one DNS record type using ``dig`` or the standard library.
 
-    if not shutil.which("dig"):
-        raise RuntimeError("dig was not found in PATH")
-    completed = subprocess.run(
-        ["dig", "+short", record_type, domain],
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError(completed.stderr.strip() or f"dig failed for {domain}")
-    values = []
-    for line in completed.stdout.splitlines():
-        # ``dig +short`` may still emit comments; remove DNS's trailing dot
-        # so report values are easier to compare and display.
-        value = line.strip().rstrip(".")
-        if value and not value.startswith(";"):
-            values.append(value)
-    return values
+    ``dig`` is preferred when installed because it exposes all requested
+    record types consistently. ``socket`` is used as a dependency-free
+    fallback.
+    """
+
+    if record_type not in {"A", "AAAA", "CNAME"}:
+        raise ValueError(f"unsupported DNS record type: {record_type}")
+    if shutil.which("dig"):
+        completed = subprocess.run(
+            ["dig", "+short", record_type, domain],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if completed.returncode != 0:
+            raise RuntimeError(completed.stderr.strip() or f"dig failed for {domain}")
+        return sorted({
+            line.strip().rstrip(".")
+            for line in completed.stdout.splitlines()
+            if line.strip() and not line.strip().startswith(";")
+        })
+
+    if record_type == "A":
+        family = socket.AF_INET
+    elif record_type == "AAAA":
+        family = socket.AF_INET6
+    elif record_type == "CNAME":
+        _hostname, aliases, _addresses = socket.gethostbyname_ex(domain)
+        return sorted({alias.rstrip(".") for alias in aliases if alias})
+    values = {
+        sockaddr[0].rstrip(".")
+        for _family, _kind, _protocol, _canonname, sockaddr in socket.getaddrinfo(
+            domain, None, family=family, type=socket.SOCK_STREAM
+        )
+    }
+    return sorted(values)
 
 
 def resolve_dns(
@@ -291,12 +309,12 @@ def resolve_dns(
     def resolve_one(result: DomainResult) -> DomainResult:
         for record_type in ("A", "AAAA", "CNAME"):
             try:
-                values = run_dig(result.domain, record_type)
-            except (RuntimeError, subprocess.SubprocessError, OSError) as exc:
+                values = resolve_dns_record(result.domain, record_type)
+            except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
                 # A failed query is recorded, but one unavailable record type
                 # should not prevent the remaining candidates from being used.
                 result.records.setdefault("_error", []).append(str(exc))
-                break
+                continue
             if values:
                 result.records[record_type] = values
         return result
