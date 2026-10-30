@@ -59,6 +59,7 @@ class DomainResult:
     domain: str
     unicode_domain: str | None = None
     records: dict[str, list[str]] = field(default_factory=dict)
+    email_capable: bool | None = None
     locations: dict[str, dict[str, Any]] = field(default_factory=dict)
     http: dict[str, Any] = field(default_factory=dict)
     certificate: dict[str, Any] = field(default_factory=dict)
@@ -253,28 +254,48 @@ def generate_candidates(
     return sorted(valid)
 
 
-def run_dig(domain: str, record_type: str) -> list[str]:
-    """Query one DNS record type through the external ``dig`` command."""
+def resolve_dns_record(domain: str, record_type: str) -> list[str]:
+    """Query one DNS record type using ``dig`` or the standard library.
 
-    if not shutil.which("dig"):
-        raise RuntimeError("dig was not found in PATH")
-    completed = subprocess.run(
-        ["dig", "+short", record_type, domain],
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError(completed.stderr.strip() or f"dig failed for {domain}")
-    values = []
-    for line in completed.stdout.splitlines():
-        # ``dig +short`` may still emit comments; remove DNS's trailing dot
-        # so report values are easier to compare and display.
-        value = line.strip().rstrip(".")
-        if value and not value.startswith(";"):
-            values.append(value)
-    return values
+    ``dig`` is preferred when installed because it exposes all requested
+    record types consistently. ``socket`` is used as a dependency-free
+    fallback.
+    """
+
+    if record_type not in {"A", "AAAA", "CNAME", "MX"}:
+        raise ValueError(f"unsupported DNS record type: {record_type}")
+    if shutil.which("dig"):
+        completed = subprocess.run(
+            ["dig", "+short", record_type, domain],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if completed.returncode != 0:
+            raise RuntimeError(completed.stderr.strip() or f"dig failed for {domain}")
+        return sorted({
+            line.strip().rstrip(".")
+            for line in completed.stdout.splitlines()
+            if line.strip() and not line.strip().startswith(";")
+        })
+
+    if record_type == "A":
+        family = socket.AF_INET
+    elif record_type == "AAAA":
+        family = socket.AF_INET6
+    elif record_type == "CNAME":
+        _hostname, aliases, _addresses = socket.gethostbyname_ex(domain)
+        return sorted({alias.rstrip(".") for alias in aliases if alias})
+    elif record_type == "MX":
+        raise RuntimeError("MX lookup requires dig when the external resolver is unavailable")
+    values = {
+        sockaddr[0].rstrip(".")
+        for _family, _kind, _protocol, _canonname, sockaddr in socket.getaddrinfo(
+            domain, None, family=family, type=socket.SOCK_STREAM
+        )
+    }
+    return sorted(values)
 
 
 def resolve_dns(
@@ -282,6 +303,7 @@ def resolve_dns(
     unicode_domains: dict[str, str],
     progress: ProgressCallback | None = None,
     max_workers: int = DEFAULT_MAX_WORKERS,
+    verbose: bool = False,
 ) -> list[DomainResult]:
     """Resolve candidates and retain only domains with at least one record."""
 
@@ -289,16 +311,18 @@ def resolve_dns(
     if not results:
         return []
     def resolve_one(result: DomainResult) -> DomainResult:
-        for record_type in ("A", "AAAA", "CNAME"):
+        for record_type in ("A", "AAAA", "CNAME", "MX"):
             try:
-                values = run_dig(result.domain, record_type)
-            except (RuntimeError, subprocess.SubprocessError, OSError) as exc:
+                values = resolve_dns_record(result.domain, record_type)
+            except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
                 # A failed query is recorded, but one unavailable record type
                 # should not prevent the remaining candidates from being used.
                 result.records.setdefault("_error", []).append(str(exc))
-                break
+                continue
             if values:
                 result.records[record_type] = values
+            if record_type == "MX":
+                result.email_capable = bool(values)
         return result
 
     completed = 0
@@ -309,13 +333,23 @@ def resolve_dns(
             index = futures[future]
             results[index] = future.result()
             result = results[index]
-            if result.records.get("A") or result.records.get("AAAA") or result.records.get("CNAME"):
+            if verbose and (
+                result.records.get("A")
+                or result.records.get("AAAA")
+                or result.records.get("CNAME")
+                or result.records.get("MX")
+            ):
                 print(f"DNS found: {result.domain} -> {result.records}")
             completed += 1
             if progress:
                 progress(completed, len(results))
-    return [result for result in results if result.records.get("A") or result.records.get("AAAA")
-            or result.records.get("CNAME")]
+    return [
+        result for result in results
+        if result.records.get("A")
+        or result.records.get("AAAA")
+        or result.records.get("CNAME")
+        or result.records.get("MX")
+    ]
 
 
 def lookup_location(ip: str) -> dict[str, Any]:
@@ -387,7 +421,7 @@ def fetch_site(domain: str) -> dict[str, Any]:
 
 
 def collect_http(results: list[DomainResult], progress: ProgressCallback | None = None,
-                 max_workers: int = DEFAULT_MAX_WORKERS) -> None:
+                 max_workers: int = DEFAULT_MAX_WORKERS, verbose: bool = False) -> None:
     """Probe the HTTPS endpoint for every DNS-discovered domain."""
 
     if not results:
@@ -405,7 +439,7 @@ def collect_http(results: list[DomainResult], progress: ProgressCallback | None 
         for index, future in enumerate(as_completed(futures), 1):
             result, response = future.result()
             result.http = response
-            if "error" not in response:
+            if verbose and "error" not in response:
                 print(f"HTTPS site found: {result.domain} ({response.get('title') or 'no title'})")
             if progress:
                 progress(index, len(results))
@@ -496,6 +530,9 @@ def score_domain(source: str, result: DomainResult) -> None:
     if result.records.get("CNAME"):
         score += 5
         reasons.append("CNAME record found")
+    if result.records.get("MX"):
+        score += 8
+        reasons.append("MX record found: domain can receive email")
     if result.http and "error" not in result.http:
         score += 10
         reasons.append("HTTPS site reachable")
@@ -578,6 +615,10 @@ def parse_args() -> argparse.Namespace:
         "--workers", type=int, default=DEFAULT_MAX_WORKERS,
         help=f"maximum number of concurrent network tasks (default: {DEFAULT_MAX_WORKERS})",
     )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="display intermediate results and the final summary",
+    )
     return parser.parse_args()
 
 
@@ -641,8 +682,9 @@ def print_summary(source: str, candidates: list[str], results: list[DomainResult
     dns_domains = [
         result for result in results
         if result.records.get("A") or result.records.get("AAAA")
-        or result.records.get("CNAME")
+        or result.records.get("CNAME") or result.records.get("MX")
     ]
+    email_domains = [result for result in results if result.records.get("MX")]
     https_domains = [
         result for result in results
         if result.http and "error" not in result.http
@@ -657,6 +699,7 @@ def print_summary(source: str, candidates: list[str], results: list[DomainResult
     print(f"  Candidates generated: {len(candidates)}")
     if "dns" in steps:
         print(f"  Domains with DNS records: {len(dns_domains)}")
+        print(f"  Domains with mail records (MX): {len(email_domains)}")
     if "http" in steps:
         print(f"  HTTPS sites found: {len(https_domains)}")
     if "cert" in steps:
@@ -721,7 +764,7 @@ def main() -> int:
         # form is retained for readers of the report.
         unicode_domains = {to_idna_domain(candidate): candidate for candidate in unicode_candidates}
         candidates = sorted(unicode_domains)
-        if "generate" in steps:
+        if args.verbose and "generate" in steps:
             print(f"    Generated {len(candidates)} candidate domain(s).")
         results = [DomainResult(domain, unicode_domains.get(domain)) for domain in candidates]
         if "dns" in steps:
@@ -730,10 +773,11 @@ def main() -> int:
                 "DNS candidates",
                 len(candidates),
                 lambda progress: resolve_dns(
-                    candidates, unicode_domains, progress, args.workers
+                    candidates, unicode_domains, progress, args.workers, args.verbose
                 ),
             )
-            print(f"    Found DNS records for {len(results)} domain(s).")
+            if args.verbose:
+                print(f"    Found DNS records for {len(results)} domain(s).")
         if "geo" in steps:
             start_step("Geolocation", f"looking up IP addresses for {len(results)} domain(s)")
             location_total = sum(
@@ -747,16 +791,20 @@ def main() -> int:
                 lambda progress: collect_locations(results, progress, args.workers),
             )
             location_count = sum(len(result.locations) for result in results)
-            print(f"    Processed {location_count} IP address(es).")
+            if args.verbose:
+                print(f"    Processed {location_count} IP address(es).")
         if "http" in steps:
             start_step("HTTPS", f"checking {len(results)} discovered domain(s)")
             run_with_progress(
                 "HTTPS candidates",
                 len(results),
-                lambda progress: collect_http(results, progress, args.workers),
+                lambda progress: collect_http(
+                    results, progress, args.workers, args.verbose
+                ),
             )
             available_count = sum("error" not in result.http for result in results)
-            print(f"    Found {available_count} HTTPS site(s).")
+            if args.verbose:
+                print(f"    Found {available_count} HTTPS site(s).")
         if "cert" in steps:
             start_step("Certificates", f"retrieving certificates for {len(results)} domain(s)")
             run_with_progress(
@@ -768,7 +816,8 @@ def main() -> int:
                 bool(result.certificate) and "error" not in result.certificate
                 for result in results
             )
-            print(f"    Retrieved {certificate_count} certificate(s).")
+            if args.verbose:
+                print(f"    Retrieved {certificate_count} certificate(s).")
         score_results(source, results)
         start_step("Report", f"writing results to {args.output}")
         write_report(

@@ -5,7 +5,9 @@ Typosquatting detection tool to identify potentially malicious lookalike domains
 
 `typ0` is a standard-library Python CLI that generates common lookalike domains,
 including Unicode confusables from the official Unicode [confusables.txt](https://www.unicode.org/Public/security/latest/confusables.txt) data,
-checks them with `dig`, optionally looks up IP geolocation, checks HTTPS pages,
+resolves them with `dig` when available (and otherwise Python's standard-library
+DNS resolver), checks whether domains can receive email through MX records,
+optionally looks up IP geolocation, checks HTTPS pages,
 and extracts TLS certificate information.
 
 ```bash
@@ -42,11 +44,16 @@ python3 typ0.py example.com --output report.json \
 ```
 
 Available steps are `generate`, `dns`, `geo`, `http`, and `cert`. By default all
-steps are enabled. `dns` requires the `dig` command to be installed and
-available in `PATH`. The `geo` step sends discovered public IP addresses to the
-public `https://ipwho.is/` API for geolocation. The generation step downloads
-the official Unicode source over HTTPS; use `--confusables-url` to provide a
-mirror or a local HTTP server.
+steps are enabled. DNS lookups use `dig` when it is installed and fall back to
+the operating system resolver through Python's standard library otherwise. The
+`MX` record is used to identify domains that could receive email and to add
+that signal to the review score. MX lookups require `dig`; when it is absent,
+the other DNS checks still use the `socket` fallback, but email capability
+cannot be determined. The
+`geo` step sends discovered public IP addresses to the public
+`https://ipwho.is/` API for geolocation. The generation step downloads the
+official Unicode source over HTTPS; use `--confusables-url` to provide a mirror
+or a local HTTP server.
 Network operations use a ten-second timeout, except the Unicode source download,
 which uses fifteen seconds.
 
@@ -55,6 +62,14 @@ control the maximum number of simultaneous tasks; it defaults to 8:
 
 ```bash
 python3 typ0.py example.com --output report.json --top-tlds --workers 4
+```
+
+By default, the console displays the workflow steps, their progress bars, and
+the final summary. Intermediate findings are hidden. Use `--verbose` to display
+those findings as they are collected:
+
+```bash
+python3 typ0.py example.com --output report.json --verbose
 ```
 
 Each discovered domain receives a heuristic review-priority score from 0 to

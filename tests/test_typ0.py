@@ -38,6 +38,103 @@ class DomainParsingTests(unittest.TestCase):
             typ0.parse_tlds(" , . ")
 
 
+class DNSResolutionTests(unittest.TestCase):
+    @patch.object(typ0.shutil, "which", return_value="/usr/bin/dig")
+    @patch.object(
+        typ0.subprocess,
+        "run",
+        return_value=type("Completed", (), {
+            "returncode": 0,
+            "stdout": "192.0.2.1.\n",
+            "stderr": "",
+        })(),
+    )
+    def test_prefers_dig_when_available(self, run, which) -> None:
+        self.assertEqual(
+            typ0.resolve_dns_record("example.com", "A"),
+            ["192.0.2.1"],
+        )
+        which.assert_called_once_with("dig")
+        run.assert_called_once()
+
+    @patch.object(typ0.shutil, "which", return_value="/usr/bin/dig")
+    @patch.object(
+        typ0.subprocess,
+        "run",
+        return_value=type("Completed", (), {
+            "returncode": 0,
+            "stdout": "10 mail.example.com.\n",
+            "stderr": "",
+        })(),
+    )
+    def test_resolves_mx_records_with_dig(self, run, _which) -> None:
+        self.assertEqual(
+            typ0.resolve_dns_record("example.com", "MX"),
+            ["10 mail.example.com"],
+        )
+        run.assert_called_once()
+
+    @patch.object(typ0, "resolve_dns_record")
+    def test_marks_domain_as_email_capable_when_mx_exists(self, resolve_record) -> None:
+        resolve_record.side_effect = lambda _domain, record_type: {
+            "A": ["192.0.2.1"],
+            "AAAA": [],
+            "CNAME": [],
+            "MX": ["10 mail.example.com"],
+        }[record_type]
+
+        results = typ0.resolve_dns(["example.com"], {"example.com": "example.com"})
+
+        self.assertTrue(results[0].email_capable)
+        self.assertEqual(results[0].records["MX"], ["10 mail.example.com"])
+
+    @patch.object(
+        typ0.shutil,
+        "which",
+        return_value=None,
+    )
+    @patch.object(
+        typ0.socket,
+        "getaddrinfo",
+        return_value=[
+            (typ0.socket.AF_INET, 1, 6, "", ("192.0.2.1", 0)),
+            (typ0.socket.AF_INET, 1, 6, "", ("192.0.2.1", 0)),
+        ],
+    )
+    def test_resolves_a_records_without_dig(self, _getaddrinfo, _which) -> None:
+        self.assertEqual(
+            typ0.resolve_dns_record("example.com", "A"),
+            ["192.0.2.1"],
+        )
+
+    @patch.object(
+        typ0.shutil,
+        "which",
+        return_value=None,
+    )
+    @patch.object(
+        typ0.socket,
+        "gethostbyname_ex",
+        return_value=("example.com", ["alias.example.com."], ["192.0.2.1"]),
+    )
+    def test_resolves_cname_aliases_from_standard_library(
+        self, _gethostbyname_ex, _which
+    ) -> None:
+        self.assertEqual(
+            typ0.resolve_dns_record("example.com", "CNAME"),
+            ["alias.example.com"],
+        )
+
+    def test_rejects_unsupported_record_type(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unsupported DNS record type"):
+            typ0.resolve_dns_record("example.com", "TXT")
+
+    @patch.object(typ0.shutil, "which", return_value=None)
+    def test_mx_requires_dig_for_socket_fallback(self, _which) -> None:
+        with self.assertRaisesRegex(RuntimeError, "MX lookup requires dig"):
+            typ0.resolve_dns_record("example.com", "MX")
+
+
 class CandidateGenerationTests(unittest.TestCase):
     @patch.object(typ0, "load_confusables", return_value={})
     def test_generates_multiple_mutation_families(self, _load_confusables) -> None:
