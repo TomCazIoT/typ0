@@ -6,7 +6,8 @@ Typosquatting detection tool to identify potentially malicious lookalike domains
 `typ0` is a standard-library Python CLI that generates common lookalike domains,
 including Unicode confusables from the official Unicode [confusables.txt](https://www.unicode.org/Public/security/latest/confusables.txt) data,
 resolves them with `dig` when available (and otherwise Python's standard-library
-DNS resolver), optionally looks up IP geolocation, checks HTTPS pages,
+DNS resolver), checks whether domains can receive email through MX records,
+optionally looks up IP geolocation, checks HTTPS pages,
 and extracts TLS certificate information.
 
 ```bash
@@ -45,6 +46,10 @@ python3 typ0.py example.com --output report.json \
 Available steps are `generate`, `dns`, `geo`, `http`, and `cert`. By default all
 steps are enabled. DNS lookups use `dig` when it is installed and fall back to
 the operating system resolver through Python's standard library otherwise. The
+`MX` record is used to identify domains that could receive email and to add
+that signal to the review score. MX lookups require `dig`; when it is absent,
+the other DNS checks still use the `socket` fallback, but email capability
+cannot be determined. The
 `geo` step sends discovered public IP addresses to the public
 `https://ipwho.is/` API for geolocation. The generation step downloads the
 official Unicode source over HTTPS; use `--confusables-url` to provide a mirror

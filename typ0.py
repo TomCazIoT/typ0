@@ -59,6 +59,7 @@ class DomainResult:
     domain: str
     unicode_domain: str | None = None
     records: dict[str, list[str]] = field(default_factory=dict)
+    email_capable: bool | None = None
     locations: dict[str, dict[str, Any]] = field(default_factory=dict)
     http: dict[str, Any] = field(default_factory=dict)
     certificate: dict[str, Any] = field(default_factory=dict)
@@ -261,7 +262,7 @@ def resolve_dns_record(domain: str, record_type: str) -> list[str]:
     fallback.
     """
 
-    if record_type not in {"A", "AAAA", "CNAME"}:
+    if record_type not in {"A", "AAAA", "CNAME", "MX"}:
         raise ValueError(f"unsupported DNS record type: {record_type}")
     if shutil.which("dig"):
         completed = subprocess.run(
@@ -286,6 +287,8 @@ def resolve_dns_record(domain: str, record_type: str) -> list[str]:
     elif record_type == "CNAME":
         _hostname, aliases, _addresses = socket.gethostbyname_ex(domain)
         return sorted({alias.rstrip(".") for alias in aliases if alias})
+    elif record_type == "MX":
+        raise RuntimeError("MX lookup requires dig when the external resolver is unavailable")
     values = {
         sockaddr[0].rstrip(".")
         for _family, _kind, _protocol, _canonname, sockaddr in socket.getaddrinfo(
@@ -308,7 +311,7 @@ def resolve_dns(
     if not results:
         return []
     def resolve_one(result: DomainResult) -> DomainResult:
-        for record_type in ("A", "AAAA", "CNAME"):
+        for record_type in ("A", "AAAA", "CNAME", "MX"):
             try:
                 values = resolve_dns_record(result.domain, record_type)
             except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
@@ -318,6 +321,8 @@ def resolve_dns(
                 continue
             if values:
                 result.records[record_type] = values
+            if record_type == "MX":
+                result.email_capable = bool(values)
         return result
 
     completed = 0
@@ -332,13 +337,19 @@ def resolve_dns(
                 result.records.get("A")
                 or result.records.get("AAAA")
                 or result.records.get("CNAME")
+                or result.records.get("MX")
             ):
                 print(f"DNS found: {result.domain} -> {result.records}")
             completed += 1
             if progress:
                 progress(completed, len(results))
-    return [result for result in results if result.records.get("A") or result.records.get("AAAA")
-            or result.records.get("CNAME")]
+    return [
+        result for result in results
+        if result.records.get("A")
+        or result.records.get("AAAA")
+        or result.records.get("CNAME")
+        or result.records.get("MX")
+    ]
 
 
 def lookup_location(ip: str) -> dict[str, Any]:
@@ -519,6 +530,9 @@ def score_domain(source: str, result: DomainResult) -> None:
     if result.records.get("CNAME"):
         score += 5
         reasons.append("CNAME record found")
+    if result.records.get("MX"):
+        score += 8
+        reasons.append("MX record found: domain can receive email")
     if result.http and "error" not in result.http:
         score += 10
         reasons.append("HTTPS site reachable")
@@ -668,8 +682,9 @@ def print_summary(source: str, candidates: list[str], results: list[DomainResult
     dns_domains = [
         result for result in results
         if result.records.get("A") or result.records.get("AAAA")
-        or result.records.get("CNAME")
+        or result.records.get("CNAME") or result.records.get("MX")
     ]
+    email_domains = [result for result in results if result.records.get("MX")]
     https_domains = [
         result for result in results
         if result.http and "error" not in result.http
@@ -684,6 +699,7 @@ def print_summary(source: str, candidates: list[str], results: list[DomainResult
     print(f"  Candidates generated: {len(candidates)}")
     if "dns" in steps:
         print(f"  Domains with DNS records: {len(dns_domains)}")
+        print(f"  Domains with mail records (MX): {len(email_domains)}")
     if "http" in steps:
         print(f"  HTTPS sites found: {len(https_domains)}")
     if "cert" in steps:

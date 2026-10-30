@@ -57,6 +57,37 @@ class DNSResolutionTests(unittest.TestCase):
         which.assert_called_once_with("dig")
         run.assert_called_once()
 
+    @patch.object(typ0.shutil, "which", return_value="/usr/bin/dig")
+    @patch.object(
+        typ0.subprocess,
+        "run",
+        return_value=type("Completed", (), {
+            "returncode": 0,
+            "stdout": "10 mail.example.com.\n",
+            "stderr": "",
+        })(),
+    )
+    def test_resolves_mx_records_with_dig(self, run, _which) -> None:
+        self.assertEqual(
+            typ0.resolve_dns_record("example.com", "MX"),
+            ["10 mail.example.com"],
+        )
+        run.assert_called_once()
+
+    @patch.object(typ0, "resolve_dns_record")
+    def test_marks_domain_as_email_capable_when_mx_exists(self, resolve_record) -> None:
+        resolve_record.side_effect = lambda _domain, record_type: {
+            "A": ["192.0.2.1"],
+            "AAAA": [],
+            "CNAME": [],
+            "MX": ["10 mail.example.com"],
+        }[record_type]
+
+        results = typ0.resolve_dns(["example.com"], {"example.com": "example.com"})
+
+        self.assertTrue(results[0].email_capable)
+        self.assertEqual(results[0].records["MX"], ["10 mail.example.com"])
+
     @patch.object(
         typ0.shutil,
         "which",
@@ -96,6 +127,11 @@ class DNSResolutionTests(unittest.TestCase):
 
     def test_rejects_unsupported_record_type(self) -> None:
         with self.assertRaisesRegex(ValueError, "unsupported DNS record type"):
+            typ0.resolve_dns_record("example.com", "TXT")
+
+    @patch.object(typ0.shutil, "which", return_value=None)
+    def test_mx_requires_dig_for_socket_fallback(self, _which) -> None:
+        with self.assertRaisesRegex(RuntimeError, "MX lookup requires dig"):
             typ0.resolve_dns_record("example.com", "MX")
 
 
