@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import socket
 import ssl
@@ -15,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from difflib import SequenceMatcher
 from html.parser import HTMLParser
+from http.client import HTTPException
 from ipaddress import ip_address
 from pathlib import Path
 from typing import Any
@@ -22,8 +24,8 @@ from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-DEFAULT_STEPS = ("generate", "dns", "geo", "http", "cert")
 STEP_NAMES = ("generate", "dns", "geo", "http", "cert")
+DEFAULT_STEPS = STEP_NAMES
 CONFUSABLES_URL = "https://www.unicode.org/Public/security/latest/confusables.txt"
 TLD_LIST_URL = "https://data.iana.org/TLD/tlds-alpha-by-domain.txt"
 DEFAULT_MAX_WORKERS = 8
@@ -89,7 +91,44 @@ CHARACTER_LOOKALIKES = {
 # These terms are common in deceptive lookalike domains. They are kept small
 # and explicit so candidate generation remains predictable.
 COMMON_DOMAIN_TERMS = ("account", "login", "secure", "support", "verify")
+LABEL_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 ProgressCallback = Callable[[int, int], None]
+
+
+def validate_ascii_labels(labels: list[str]) -> None:
+    """Reject empty, non-LDH, and overlong hostname labels."""
+
+    for label in labels:
+        if not LABEL_PATTERN.fullmatch(label):
+            raise ValueError(f"invalid domain label: {label!r}")
+
+
+def validate_tld_suffix(tld: str) -> None:
+    """Validate a single-label or multi-label TLD suffix."""
+
+    labels = tld.split(".")
+    if not labels or any(not label for label in labels):
+        raise ValueError(f"invalid TLD: {tld!r}")
+    try:
+        validate_ascii_labels(labels)
+    except ValueError as exc:
+        raise ValueError(f"invalid TLD: {tld!r}") from exc
+    final_label = labels[-1]
+    if len(final_label) < 2 or final_label.isdigit():
+        raise ValueError(f"invalid TLD: {tld!r}")
+
+
+def validate_ascii_domain(domain: str) -> None:
+    """Validate the ASCII/IDNA form of a complete domain name."""
+
+    if len(domain) > 253:
+        raise ValueError("the domain name is too long")
+    labels = domain.split(".")
+    if len(labels) < 2:
+        raise ValueError("the domain must contain a hostname and a TLD")
+    validate_ascii_labels(labels)
+    if len(labels[-1]) < 2 or labels[-1].isdigit():
+        raise ValueError("the domain must contain a hostname and a TLD")
 
 
 @dataclass
@@ -143,16 +182,15 @@ def normalize_domain(value: str) -> str:
     domain = (parsed.hostname or "").rstrip(".").lower()
     if not domain or "." not in domain:
         raise ValueError("the domain must contain a hostname and a TLD")
-    if len(domain) > 253 or any(len(part) > 63 for part in domain.split(".")):
-        raise ValueError("the domain name is too long")
     try:
-        # IDNA converts internationalized hostnames to the ASCII form accepted
-        # by DNS tools and network libraries.
-        return domain.encode("idna").decode("ascii")
-    except UnicodeError as exc:
-        raise ValueError(
-            "the domain contains invalid internationalized characters"
-        ) from exc
+        ip_address(domain)
+    except ValueError:
+        pass
+    else:
+        raise ValueError("IP addresses are not valid domains")
+    # IDNA converts internationalized hostnames to the ASCII form accepted by
+    # DNS tools and network libraries.
+    return to_idna_domain(domain)
 
 
 def load_confusables(url: str = CONFUSABLES_URL) -> dict[str, set[str]]:
@@ -165,10 +203,11 @@ def load_confusables(url: str = CONFUSABLES_URL) -> dict[str, set[str]]:
 
     request = Request(url, headers={"User-Agent": "typ0/1.0"})
     with urlopen(request, timeout=15) as response:
-        content = response.read(8_000_000).decode("utf-8")
+        content = response.read(8_000_000).decode("utf-8-sig")
 
     mappings: dict[str, set[str]] = {}
     for line in content.splitlines():
+        line = line.strip()
         # Comments and blank lines are not mapping records.
         if not line or line.startswith("#"):
             continue
@@ -196,16 +235,22 @@ def load_confusables(url: str = CONFUSABLES_URL) -> dict[str, set[str]]:
 
 
 def to_idna_domain(domain: str) -> str:
-    """Encode every hostname label separately because dots are separators."""
+    """Encode and validate a domain one label at a time."""
 
+    labels = domain.split(".")
+    if any(not label for label in labels):
+        raise ValueError(f"invalid generated internationalized domain: {domain}")
     try:
-        return ".".join(
-            label.encode("idna").decode("ascii") for label in domain.split(".")
+        encoded_domain = ".".join(
+            label.encode("idna").decode("ascii") for label in labels
         )
     except UnicodeError as exc:
         raise ValueError(
             f"invalid generated internationalized domain: {domain}"
         ) from exc
+    encoded_domain = encoded_domain.lower()
+    validate_ascii_domain(encoded_domain)
+    return encoded_domain
 
 
 def load_tlds(url: str = TLD_LIST_URL) -> list[str]:
@@ -213,25 +258,29 @@ def load_tlds(url: str = TLD_LIST_URL) -> list[str]:
 
     request = Request(url, headers={"User-Agent": "typ0/1.0"})
     with urlopen(request, timeout=15) as response:
-        content = response.read(500_000).decode("utf-8")
-    tlds = [
-        line.strip().lower()
-        for line in content.splitlines()
-        if line.strip() and not line.startswith("#")
-    ]
+        content = response.read(500_000).decode("utf-8-sig")
+    tlds: list[str] = []
+    for line in content.splitlines():
+        tld = line.strip().strip(".").lower()
+        if not tld or tld.startswith("#"):
+            continue
+        validate_tld_suffix(tld)
+        tlds.append(tld)
     if not tlds:
         raise ValueError("TLD source did not contain valid TLDs")
-    return tlds
+    return list(dict.fromkeys(tlds))
 
 
 def parse_tlds(value: str) -> list[str]:
     """Parse a comma-separated TLD argument and preserve its input order."""
 
-    tlds = [
-        tld
-        for raw_tld in value.split(",")
-        if (tld := raw_tld.strip().lstrip(".").lower())
-    ]
+    tlds: list[str] = []
+    for raw_tld in value.split(","):
+        tld = raw_tld.strip().strip(".").lower()
+        if not tld:
+            continue
+        validate_tld_suffix(tld)
+        tlds.append(tld)
     if not tlds:
         raise ValueError("at least one TLD must be provided")
     return list(dict.fromkeys(tlds))
@@ -242,8 +291,8 @@ def generate_candidates(
     tlds: list[str],
     confusables_url: str = CONFUSABLES_URL,
     progress: ProgressCallback | None = None,
-) -> list[str]:
-    """Generate valid IDNA candidates for the first label of ``domain``.
+) -> dict[str, str]:
+    """Generate a mapping of IDNA candidates to their display forms.
 
     The mutation rules deliberately operate on the name only. The suffix is
     then combined with each requested TLD, allowing the same typo pattern to
@@ -280,21 +329,22 @@ def generate_candidates(
         for replacement in confusables.get(character, ()):
             candidates.add(name[:index] + replacement + name[index + 1 :])
 
+    # DNS labels cannot start or end with a hyphen and are limited to 63
+    # characters, so reject those before trying every TLD.
+    candidate_names = sorted(
+        candidate
+        for candidate in candidates
+        if candidate
+        and len(candidate) <= 63
+        and not candidate.startswith("-")
+        and not candidate.endswith("-")
+    )
     valid: dict[str, str] = {}
-    total_candidates = len(candidates) * len(tlds)
+    total_candidates = len(candidate_names) * len(tlds)
     if progress:
         progress(0, total_candidates)
     processed = 0
-    for candidate in candidates:
-        # DNS labels cannot start or end with a hyphen and are limited to
-        # 63 characters, so reject those before trying every TLD.
-        if (
-            not candidate
-            or len(candidate) > 63
-            or candidate.startswith("-")
-            or candidate.endswith("-")
-        ):
-            continue
+    for candidate in candidate_names:
         for tld in tlds:
             unicode_domain = f"{candidate}.{tld}"
             try:
@@ -306,20 +356,27 @@ def generate_candidates(
             if progress:
                 progress(processed, total_candidates)
     valid.pop(domain, None)
-    return sorted(valid)
+    return dict(sorted(valid.items()))
 
 
-def resolve_dns_record(domain: str, record_type: str) -> list[str]:
+def resolve_dns_record(
+    domain: str,
+    record_type: str,
+    dig_available: bool | None = None,
+) -> list[str]:
     """Query one DNS record type using ``dig`` or the standard library.
 
     ``dig`` is preferred when installed because it exposes all requested
     record types consistently. ``socket`` is used as a dependency-free
-    fallback.
+    fallback. Callers that already checked for ``dig`` can pass
+    ``dig_available`` to avoid repeated ``shutil.which`` calls.
     """
 
     if record_type not in {"A", "AAAA", "CNAME", "MX"}:
         raise ValueError(f"unsupported DNS record type: {record_type}")
-    if shutil.which("dig"):
+    if dig_available is None:
+        dig_available = shutil.which("dig") is not None
+    if dig_available:
         completed = subprocess.run(
             ["dig", "+short", record_type, domain],
             capture_output=True,
@@ -370,10 +427,15 @@ def resolve_dns(
     if not results:
         return []
 
+    dig_available = shutil.which("dig") is not None
+    record_types = (
+        ("A", "AAAA", "CNAME", "MX") if dig_available else ("A", "AAAA", "CNAME")
+    )
+
     def resolve_one(result: DomainResult) -> DomainResult:
-        for record_type in ("A", "AAAA", "CNAME", "MX"):
+        for record_type in record_types:
             try:
-                values = resolve_dns_record(result.domain, record_type)
+                values = resolve_dns_record(result.domain, record_type, dig_available)
             except (
                 OSError,
                 RuntimeError,
@@ -426,6 +488,8 @@ def lookup_location(ip: str) -> dict[str, Any]:
     request = Request(f"https://ipwho.is/{ip}", headers={"User-Agent": "typ0/1.0"})
     with urlopen(request, timeout=10) as response:
         payload = json.load(response)
+    if not isinstance(payload, dict):
+        raise TypeError("location lookup returned an invalid response")
     if not payload.get("success", False):
         raise RuntimeError(str(payload.get("message", "location lookup failed")))
     return {
@@ -439,39 +503,41 @@ def collect_locations(
     progress: ProgressCallback | None = None,
     max_workers: int = DEFAULT_MAX_WORKERS,
 ) -> None:
-    """Add geolocation data to each A and AAAA address found by DNS."""
+    """Add geolocation data for public A and AAAA addresses found by DNS."""
 
-    total_ips = sum(
-        len(result.records.get(record_type, []))
-        for result in results
-        for record_type in ("A", "AAAA")
-    )
-    tasks = [
-        (result, ip)
-        for result in results
-        for record_type in ("A", "AAAA")
-        for ip in result.records.get(record_type, [])
-    ]
-    if not tasks:
+    occurrences: dict[str, list[tuple[DomainResult, str]]] = {}
+    for result in results:
+        for record_type in ("A", "AAAA"):
+            for ip in result.records.get(record_type, []):
+                try:
+                    address = ip_address(ip)
+                except ValueError:
+                    continue
+                if not address.is_global:
+                    continue
+                occurrences.setdefault(str(address), []).append((result, ip))
+    if not occurrences:
         return
 
-    def lookup(
-        item: tuple[DomainResult, str],
-    ) -> tuple[DomainResult, str, dict[str, Any]]:
-        result, ip = item
+    total_ips = len(occurrences)
+
+    def lookup(ip: str) -> tuple[str, dict[str, Any]]:
         try:
-            location = lookup_location(str(ip_address(ip)))
-        except (URLError, OSError, RuntimeError, ValueError) as exc:
+            location = lookup_location(ip)
+        except (URLError, OSError, RuntimeError, TypeError, ValueError) as exc:
             # Keep the failure beside the address so the report remains useful
             # and the rest of the batch can continue.
             location = {"error": str(exc)}
-        return result, ip, location
+        return ip, location
 
-    with ThreadPoolExecutor(max_workers=min(max_workers, len(tasks))) as executor:
-        futures = [executor.submit(lookup, task) for task in tasks]
+    if progress:
+        progress(0, total_ips)
+    with ThreadPoolExecutor(max_workers=min(max_workers, total_ips)) as executor:
+        futures = [executor.submit(lookup, ip) for ip in occurrences]
         for processed_ips, future in enumerate(as_completed(futures), 1):
-            result, ip, location = future.result()
-            result.locations[ip] = location
+            ip, location = future.result()
+            for result, original_ip in occurrences[ip]:
+                result.locations[original_ip] = location
             if progress:
                 progress(processed_ips, total_ips)
 
@@ -511,7 +577,7 @@ def collect_http(
     def fetch(result: DomainResult) -> tuple[DomainResult, dict[str, Any]]:
         try:
             response = fetch_site(result.domain)
-        except (URLError, OSError, ValueError) as exc:
+        except (URLError, OSError, ValueError, HTTPException) as exc:
             response = {"error": str(exc)}
         return result, response
 
@@ -539,6 +605,8 @@ def extract_certificate(domain: str) -> dict[str, Any]:
         context.wrap_socket(connection, server_hostname=domain) as tls_socket,
     ):
         certificate = tls_socket.getpeercert()
+    if not certificate:
+        raise ValueError("no certificate was presented")
     return {
         "subject": dict(item[0] for item in certificate.get("subject", ())),
         "issuer": dict(item[0] for item in certificate.get("issuer", ())),
@@ -588,11 +656,38 @@ def collect_certificates(
             progress(completed, len(results))
 
 
+def certificate_covers(source: str, subject_alt_names: list[str]) -> bool:
+    """Return whether a certificate SAN covers the source domain."""
+
+    source = source.lower()
+    for name in subject_alt_names:
+        name = name.lower()
+        if name == source:
+            return True
+        if (
+            name.startswith("*.")
+            and source.endswith(name[1:])
+            and source.count(".") == name.count(".")
+        ):
+            return True
+    return False
+
+
+def display_label(domain: str) -> str:
+    """Return the first label in Unicode form when it is valid IDNA."""
+
+    label = domain.split(".", 1)[0]
+    try:
+        return label.encode("ascii").decode("idna")
+    except UnicodeError:
+        return label
+
+
 def score_domain(source: str, result: DomainResult) -> None:
     """Assign a heuristic review-priority score without comparing site content."""
 
-    source_name = source.split(".", 1)[0]
-    candidate_name = result.domain.split(".", 1)[0]
+    source_name = display_label(source)
+    candidate_name = (result.unicode_domain or result.domain).split(".", 1)[0]
     similarity = SequenceMatcher(None, source_name, candidate_name).ratio()
     score = round(similarity * 35)
     reasons = [f"name similarity: {round(similarity * 100)}%"]
@@ -631,7 +726,7 @@ def score_domain(source: str, result: DomainResult) -> None:
         score += 2
         reasons.append("TLS certificate retrieved")
         subject_alt_names = result.certificate.get("subject_alt_names", [])
-        if source in subject_alt_names:
+        if certificate_covers(source, subject_alt_names):
             score += 8
             reasons.append("source domain appears in certificate SANs")
 
@@ -662,6 +757,11 @@ def write_report(
 ) -> None:
     """Serialize the run in a stable, human-readable JSON report."""
 
+    discovered_domains = []
+    for result in results:
+        item = asdict(result)
+        item["locations"] = dict(sorted(item["locations"].items()))
+        discovered_domains.append(item)
     report = {
         "tool": "typ0",
         "source_domain": source,
@@ -670,12 +770,18 @@ def write_report(
         "tlds": tlds,
         "candidate_count": len(candidates),
         "candidates": candidates,
-        "discovered_domains": [asdict(result) for result in results],
+        "discovered_domains": discovered_domains,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(report, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
-    )
+    temporary_path = path.with_name(f".{path.name}.tmp")
+    try:
+        temporary_path.write_text(
+            json.dumps(report, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+        )
+        temporary_path.replace(path)
+    except Exception:
+        temporary_path.unlink(missing_ok=True)
+        raise
 
 
 def parse_args() -> argparse.Namespace:
@@ -825,17 +931,18 @@ def print_summary(
         print(f"  HTTPS sites found: {len(https_domains)}")
     if "cert" in steps:
         print(f"  TLS certificates retrieved: {len(certificate_domains)}")
-    if dns_domains:
+    review_domains = dns_domains or https_domains or certificate_domains
+    if review_domains:
         print("  Domains requiring review:")
         for result in sorted(
-            dns_domains, key=lambda item: item.review_score or 0, reverse=True
+            review_domains, key=lambda item: item.review_score or 0, reverse=True
         )[:10]:
             print(
                 f"    - {result.domain} "
                 f"(score: {result.review_score}/100, {result.review_priority})"
             )
-        if len(dns_domains) > 10:
-            print(f"    ... and {len(dns_domains) - 10} more")
+        if len(review_domains) > 10:
+            print(f"    ... and {len(review_domains) - 10} more")
     print("  Note: these findings indicate possibilities, not proof of typosquatting.")
 
 
@@ -863,7 +970,7 @@ def main() -> int:
             source_tld = ".".join(source.split(".")[1:])
             # The options are mutually exclusive in argparse; this branch
             # chooses the requested TLD source while preserving the default.
-            if args.tlds:
+            if args.tlds is not None:
                 tlds = parse_tlds(args.tlds)
             elif args.top_tlds:
                 tlds = list(dict.fromkeys([source_tld, *TOP_TLDS]))
@@ -871,7 +978,7 @@ def main() -> int:
                 tlds = load_tlds(args.tld_list_url)
             else:
                 tlds = [source_tld]
-            unicode_candidates = run_with_progress(
+            unicode_domains = run_with_progress(
                 "Candidates",
                 0,
                 lambda progress: generate_candidates(
@@ -881,13 +988,12 @@ def main() -> int:
         else:
             # Without generation, later steps operate only on the supplied
             # domain. This makes ``--steps dns`` useful for a direct check.
-            unicode_candidates = [source]
+            if args.tlds is not None or args.top_tlds or args.all_tlds:
+                raise ValueError("TLD selection requires the generate step")
+            unicode_domains = {source: source}
             tlds = [".".join(source.split(".")[1:])]
-        # The IDNA form is used for network operations; the original Unicode
-        # form is retained for readers of the report.
-        unicode_domains = {
-            to_idna_domain(candidate): candidate for candidate in unicode_candidates
-        }
+        # The IDNA form is used for network operations; the Unicode form is
+        # retained for readers of the report.
         candidates = sorted(unicode_domains)
         if "generate" in steps:
             print(
@@ -914,14 +1020,9 @@ def main() -> int:
             start_step(
                 "Geolocation", f"looking up IP addresses for {len(results)} domain(s)"
             )
-            location_total = sum(
-                len(result.records.get(record_type, []))
-                for result in results
-                for record_type in ("A", "AAAA")
-            )
             run_with_progress(
                 "IP addresses",
-                location_total,
+                0,
                 lambda progress: collect_locations(results, progress, args.workers),
             )
             location_count = sum(len(result.locations) for result in results)
