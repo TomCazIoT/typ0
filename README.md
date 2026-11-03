@@ -88,7 +88,6 @@ prefixes and suffixes, and Unicode confusable substitutions. Unicode
 candidates are converted to IDNA (punycode) before DNS and HTTPS requests;
 both forms are included in the report.
 
-<<<<<<< HEAD
 ## How the score is computed
 
 Every discovered domain receives a `review_score` from 0 to 100. The score is
@@ -171,8 +170,6 @@ total: `low` below 25, `medium` from 25 to 49, `high` from 50 to 74, and
 corresponding observation is available; for example, skipping the `http` step
 means that HTTPS availability cannot add points. The score is a triage aid,
 not a probability, a verdict, or proof that a domain is malicious.
-
->>>>>>> origin/main
 
 ## Interpreting the results
 
