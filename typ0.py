@@ -995,6 +995,11 @@ def main() -> int:
         # The IDNA form is used for network operations; the Unicode form is
         # retained for readers of the report.
         candidates = sorted(unicode_domains)
+        if "generate" in steps:
+            print(
+                "    Candidates after IDNA conversion, deduplication, and "
+                f"source removal: {len(candidates)}"
+            )
         if args.verbose and "generate" in steps:
             print(f"    Generated {len(candidates)} candidate domain(s).")
         results = [

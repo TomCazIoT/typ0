@@ -1,5 +1,28 @@
+<<<<<<< HEAD
 __pycache__/
 *.py[cod]
 .ruff_cache/
 AGENTS.md
 report.json
+=======
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Generated reports
+report.json
+>>>>>>> origin/main
