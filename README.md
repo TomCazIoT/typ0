@@ -94,6 +94,60 @@ prefixes and suffixes, and Unicode confusable substitutions. Unicode
 candidates are converted to IDNA (punycode) before DNS and HTTPS requests;
 both forms are included in the report.
 
+## How the score is computed
+
+Every discovered domain receives a `review_score` from 0 to 100. The score is
+computed once, after all requested steps have run, by adding points from several
+independent signals. Signals from steps that were not run (or that failed)
+simply contribute nothing. The score never inspects page content, so two
+domains with different web pages but identical network and certificate
+findings receive the same score.
+
+| Signal | Points |
+| --- | --- |
+| Name similarity (see below) | 0–35 |
+| Mutation pattern (capped) | 0–15 |
+| `A` or `AAAA` record found | +10 |
+| `CNAME` record found | +5 |
+| `MX` record found (domain can receive email) | +8 |
+| HTTPS site reachable | +10 |
+| TLS certificate retrieved | +2 |
+| Source domain appears in certificate SANs | +8 |
+
+**Name similarity.** The first label of the source domain is compared with the
+first label of the candidate (in Unicode display form when available) using
+Python's `difflib.SequenceMatcher`. The similarity ratio, from 0 to 1, is
+multiplied by 35 and rounded, so an identical label scores 35 and an unrelated
+one scores close to 0.
+
+**Mutation pattern.** These signals are added together, then capped at 15:
+
+| Pattern | Points |
+| --- | --- |
+| Contains a digit (letter/digit lookalike or appended digit) | +4 |
+| Contains a hyphen-separated common security term (`account`, `login`, `secure`, `support`, `verify`) | +4 |
+| Contains a hyphen | +2 |
+| Unicode lookalike (IDNA and Unicode forms differ) | +4 |
+| Same length as the source but different (substitution or transposition) | +3 |
+
+**Network and certificate signals.** An `A`/`AAAA` record adds 10, a `CNAME`
+adds 5, and an `MX` record adds 8. A reachable HTTPS page adds 10. A retrieved
+TLS certificate adds 2, and 8 more if one of its subject alternative names
+covers the source domain (including wildcard matches).
+
+The raw total is capped at 100. The `review_priority` label is derived from the
+final score:
+
+| Score | Priority |
+| --- | --- |
+| 75–100 | `very_high` |
+| 50–74 | `high` |
+| 25–49 | `medium` |
+| 0–24 | `low` |
+
+Each result also includes `review_reasons`, the human-readable list of signals
+that contributed to its score.
+
 ## Interpreting the results
 
 The results are indicators, not proof that typosquatting exists or that a
